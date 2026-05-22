@@ -1,0 +1,24 @@
+[project]
+name = "bytedance-offer-copilot"
+version = "2.1.0"
+description = "AI 互联网职业教练 — 字节跳动校招备战 Skill"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+dependencies = [
+    "rich>=13.0.0",
+]
+optional-dependencies = { web = ["fastapi", "uvicorn"], llm = ["trae-sdk"] }
+
+[project.scripts]
+boc = "main:main"
+boc-web = "main:run_web"
+boc-cli = "main:run_cli"
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["utils", "main"]
+packages = ["modules", "components"]

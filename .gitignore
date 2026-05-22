@@ -1,0 +1,7 @@
+__pycache__/
+.claude/
+*.pyc
+growth_data.json
+*.backup/
+*.zip
+CONTEST.md

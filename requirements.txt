@@ -1,0 +1,10 @@
+# ByteDance Offer Copilot v2.0 — Minimal Dependencies
+# Core
+rich>=13.0.0
+
+# Optional: Web UI
+# fastapi>=0.115.0
+# uvicorn>=0.32.0
+
+# Optional: Standalone API mode
+# trae-sdk>=0.1.0
