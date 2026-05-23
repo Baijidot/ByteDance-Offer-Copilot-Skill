@@ -12,7 +12,7 @@ Generates:
 No mock data. Every output is LLM-driven.
 """
 
-from utils import callLlm
+from utils import callLlm, safeCallLlm
 
 SYSTEM_PROMPT = """你是字节跳动的 P8 产品负责人，同时是校招 mentor。
 你带过 30+ 校招生，深知什么样的成长路径最高效。
@@ -154,7 +154,7 @@ def generate_plan(
 - 所有建议必须可执行、可验收
 - 涉及 AI 工具推荐时，确保推荐的是 2026 年的最新工具和最佳实践，而非 2023-2024 年的过时信息"""
 
-    result = callLlm(prompt, SYSTEM_PROMPT, output_format="json")
+    result = safeCallLlm(prompt, SYSTEM_PROMPT, output_format="json")
 
     if isinstance(result, dict) and "_trait" not in result:
         result["markdown"] = _render_markdown(result)

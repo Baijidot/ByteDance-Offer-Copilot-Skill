@@ -12,7 +12,7 @@ Evaluates candidates across 7 dimensions calibrated to ByteDance campus hiring:
 No mock data. Every output is LLM-driven.
 """
 
-from utils import callLlm
+from utils import callLlm, safeCallLlm
 
 SYSTEM_PROMPT = """你是字节跳动的资深校招面试官，每年面试 200+ 校招候选人。
 你深刻理解什么样的学生能拿到 Offer。
@@ -139,7 +139,7 @@ def predict(
 - danger_signals 必须是面试官看到会皱眉的真问题
 - interviewer_comment 必须像真实面评，犀利直接"""
 
-    result = callLlm(prompt, SYSTEM_PROMPT, output_format="json")
+    result = safeCallLlm(prompt, SYSTEM_PROMPT, output_format="json")
 
     if isinstance(result, dict) and "_trait" not in result:
         result["markdown"] = _render_markdown(result)

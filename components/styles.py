@@ -937,4 +937,66 @@ tr:hover td {
 ::-webkit-scrollbar-thumb:hover {
     background: var(--border-hover);
 }
+
+/* ===== Mobile Responsive ===== */
+
+@media (max-width: 768px) {
+    .app-container { padding: 0 12px; }
+    .header { flex-direction: column; gap: 12px; align-items: flex-start; }
+    .header-nav { width: 100%; justify-content: flex-start; flex-wrap: wrap; }
+    .header-nav a { font-size: 13px; }
+
+    .hero { padding: 32px 0 24px; }
+    .hero h1 { font-size: 24px; }
+    .hero-subtitle { font-size: 14px; }
+    .hero-stats { gap: 20px; }
+    .hero-stat-value { font-size: 22px; }
+
+    .feature-grid { grid-template-columns: 1fr; }
+    .form-row { grid-template-columns: 1fr; }
+
+    .tab-nav {
+        flex-wrap: nowrap; overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 4px 2px; gap: 4px;
+    }
+    .tab-btn { padding: 8px 14px; font-size: 13px; flex-shrink: 0; white-space: nowrap; }
+
+    .card { padding: 16px; border-radius: var(--radius-md); }
+    .result-panel { padding: 16px; }
+
+    .chat-container { height: calc(100vh - 200px); border-radius: 0; border: none; }
+    .chat-message { max-width: 95%; }
+    .chat-bubble { font-size: 13px; padding: 10px 12px; }
+    .chat-input-area { padding: 12px; gap: 8px; flex-direction: column; }
+    .chat-input-area .form-input { width: 100%; }
+
+    .score-circle { width: 90px; height: 90px; }
+    .score-value { font-size: 28px; }
+    .dimension-item { flex-wrap: wrap; }
+    .dimension-name { width: 100%; margin-bottom: 4px; }
+    .dimension-score { width: auto; }
+
+    table { font-size: 12px; }
+    th, td { padding: 6px 8px; }
+
+    .footer { padding: 24px 0; font-size: 12px; }
+
+    .guide-card { max-width: 100%; width: calc(100% - 24px); padding: 20px; }
+
+    .btn-lg { padding: 12px 24px; font-size: 14px; }
+}
+
+@media (max-width: 480px) {
+    .hero h1 { font-size: 20px; }
+    .hero-badge { font-size: 11px; }
+    .tab-btn { padding: 6px 10px; font-size: 12px; }
+    .btn-lg { padding: 10px 20px; font-size: 14px; }
+    .form-input, .form-textarea, .form-select { font-size: 13px; padding: 8px 10px; }
+    .chat-container { height: calc(100vh - 160px); }
+    .chat-header { padding: 12px; }
+    .chat-messages { padding: 12px; }
+    h2 { font-size: 20px; }
+    h3 { font-size: 16px; }
+}
 """

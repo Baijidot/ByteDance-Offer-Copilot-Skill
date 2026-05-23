@@ -12,7 +12,7 @@ Transforms:
 No mock data. Every rewrite is LLM-driven.
 """
 
-from utils import callLlm
+from utils import callLlm, safeCallLlm
 
 SYSTEM_PROMPT = """你是字节跳动的 P8 产品面试官，同时也是简历筛选专家。
 你每年筛选 5000+ 份校招简历，深知什么样的表达能通过筛选。
@@ -77,7 +77,7 @@ def rewrite_project(original_text: str, target_role: str = "产品经理") -> di
 - 必须体现 AI 协同（如果是 AI 时代的项目）
 - 面试话术要有记忆点"""
 
-    result = callLlm(prompt, SYSTEM_PROMPT, output_format="json")
+    result = safeCallLlm(prompt, SYSTEM_PROMPT, output_format="json")
 
     if isinstance(result, dict) and "_trait" not in result:
         result["markdown"] = _render_markdown(result)
@@ -122,7 +122,7 @@ def rewrite_intro(
 - 有互联网感
 - 不做作"""
 
-    result = callLlm(prompt, SYSTEM_PROMPT, output_format="json")
+    result = safeCallLlm(prompt, SYSTEM_PROMPT, output_format="json")
     return result
 
 
@@ -155,7 +155,7 @@ def portfolio_advice(portfolio_items: str, target_role: str, weaknesses: str = "
 }}
 ```"""
 
-    result = callLlm(prompt, SYSTEM_PROMPT, output_format="json")
+    result = safeCallLlm(prompt, SYSTEM_PROMPT, output_format="json")
     return result
 
 

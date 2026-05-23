@@ -10,7 +10,7 @@ Output style:
 - Lists specific risk points, not vague "needs improvement"
 """
 
-from utils import callLlm
+from utils import callLlm, safeCallLlm
 
 SYSTEM_PROMPT = """你是字节跳动的面试官，正在写面评。
 
@@ -106,7 +106,7 @@ verdict_type 可选值: pass / conditional_pass / reject
 - verdict 必须明确，不能含糊
 - 风格必须像真实字节面评，不是给候选人看的礼貌版本"""
 
-    result = callLlm(prompt, SYSTEM_PROMPT, output_format="json")
+    result = safeCallLlm(prompt, SYSTEM_PROMPT, output_format="json")
 
     if isinstance(result, dict) and "_trait" not in result:
         result["markdown"] = _render_markdown(result)

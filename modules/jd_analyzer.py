@@ -11,7 +11,7 @@ No mock data. Every output is LLM-driven via callLlm().
 """
 
 import json
-from utils import callLlm, fetchInput
+from utils import callLlm, fetchInput, safeCallLlm
 
 SYSTEM_PROMPT = """你是字节跳动的 P8 级产品面试官，8 年产品经验，面试过 500+ 候选人。
 你极度擅长从 JD 中读出潜台词。

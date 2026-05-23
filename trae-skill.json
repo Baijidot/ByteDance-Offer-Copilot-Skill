@@ -1,0 +1,11 @@
+{
+  "name": "bytedance-coach",
+  "version": "2.2.0",
+  "description": "ByteDance校招AI职业教练 — JD拆解、Offer概率预测、简历重构、模拟面试（温和/高压/地狱/暖心）、面评报告、黑话检测、矛盾检测、人格画像、项目真实性审查、成长规划、岗位匹配度分析、求职迷茫诊断、群面模拟、面试会话持久化",
+  "entry_point": "main.py",
+  "entry_function": "run_skill",
+  "author": "Baijidot",
+  "tags": ["career", "interview", "resume", "bytedance", "campus-recruitment", "ai-coach", "product-manager"],
+  "dependencies": ["rich>=13.0.0", "fastapi>=0.115.0", "uvicorn>=0.32.0"],
+  "min_trae_version": "1.0.0"
+}

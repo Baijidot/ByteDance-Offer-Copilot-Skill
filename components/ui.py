@@ -4,22 +4,27 @@ FastAPI-based web interface with dark ByteDance-style theme.
 """
 
 from fastapi import FastAPI, Request, Form
-from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from typing import Optional
 import json
+import uuid
 
-from modules.jd_analyzer import JDAnalyzer
-from modules.resume_rewriter import ResumeRewriter
-from modules.offer_predictor import OfferPredictor
-from modules.mock_interviewer import MockInterviewer, InterviewSession
-from modules.growth_advisor import GrowthAdvisor
+from modules import (
+    analyze_jd, predict_offer, rewrite_project, rewrite_intro,
+    start_interview, respond, evaluate, generate_plan,
+    detect_bs, translate_bs,
+    generate_persona, detect_authenticity, match_career,
+    start_group_interview, group_respond, group_evaluate,
+)
+from utils import buildConfusionDiagnosis
 from components.styles import CSS
 
 
 # Store active interview sessions
-active_sessions: dict[str, InterviewSession] = {}
+active_sessions: dict = {}
+
+# Store active group interview sessions
+active_group_sessions: dict = {}
 
 
 def create_app() -> FastAPI:
@@ -27,15 +32,8 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="ByteDance Offer Copilot",
         description="AI时代的字节跳动校招作战室",
-        version="1.0.0",
+        version="2.2.0",
     )
-
-    # Initialize modules
-    jd_analyzer = JDAnalyzer()
-    resume_rewriter = ResumeRewriter()
-    offer_predictor = OfferPredictor()
-    mock_interviewer = MockInterviewer()
-    growth_advisor = GrowthAdvisor()
 
     # ===== Routes =====
 
@@ -50,42 +48,28 @@ def create_app() -> FastAPI:
         return HTMLResponse(content=f"<style>{CSS}</style>")
 
     @app.post("/api/analyze-jd")
-    async def analyze_jd(
+    async def api_analyze_jd(
         jd_content: str = Form(...),
         job_title: str = Form(default=""),
         jd_url: str = Form(default=""),
     ):
         """Analyze a job description."""
-        result = jd_analyzer.analyze(jd_content, job_title, jd_url)
-        output = jd_analyzer.format_output(result)
-        return {"success": True, "analysis": output}
+        result = analyze_jd(jd_content, job_title, jd_url)
+        return {"success": True, "analysis": result}
 
     @app.post("/api/rewrite-project")
-    async def rewrite_project(
+    async def api_rewrite_project(
         original_text: str = Form(...),
         target_role: str = Form(default="产品经理"),
     ):
         """Rewrite project experience."""
-        result = resume_rewriter.rewrite_project(original_text, target_role)
-        output = resume_rewriter.format_project_output(result)
-        return {"success": True, "rewrite": output}
-
-    @app.post("/api/rewrite-intro")
-    async def rewrite_intro(
-        original_text: str = Form(...),
-        school: str = Form(default=""),
-        major: str = Form(default=""),
-        highlights: str = Form(default=""),
-        target_role: str = Form(default="产品经理"),
-    ):
-        """Rewrite self-introduction."""
-        result = resume_rewriter.rewrite_self_intro(
-            original_text, school, major, highlights, target_role,
-        )
-        return {"success": True, "intro": result}
+        # Run BS detection first
+        bs = detect_bs(original_text)
+        result = rewrite_project(original_text, target_role)
+        return {"success": True, "rewrite": result, "bs_detection": bs}
 
     @app.post("/api/predict-offer")
-    async def predict_offer(
+    async def api_predict_offer(
         school: str = Form(default=""),
         major: str = Form(default=""),
         degree: str = Form(default="本科"),
@@ -98,179 +82,229 @@ def create_app() -> FastAPI:
         other_highlights: str = Form(default=""),
     ):
         """Predict offer probability."""
-        result = offer_predictor.predict(
-            school=school,
-            major=major,
-            degree=degree,
-            target_role=target_role,
-            skills=skills,
-            projects=projects,
-            internships=internships,
-            content_experience=content_experience,
-            ai_capability=ai_capability,
+        resume_parts = []
+        if school:
+            resume_parts.append(f"学校：{school}")
+        if major:
+            resume_parts.append(f"专业：{major}")
+        if skills:
+            resume_parts.append(f"技能：{skills}")
+        if internships:
+            resume_parts.append(f"实习：{internships}")
+        resume_text = "\n".join(resume_parts) if resume_parts else "未提供简历"
+
+        result = predict_offer(
+            school=school, major=major, degree=degree, target_role=target_role,
+            skills=skills, projects=projects, internships=internships,
+            content_experience=content_experience, ai_capability=ai_capability,
             other_highlights=other_highlights,
         )
-        return {
-            "success": True,
-            "probability": result.overall_probability,
-            "dimensions": [
-                {
-                    "name": d.name,
-                    "score": d.score,
-                    "max_score": d.max_score,
-                    "comment": d.comment,
-                }
-                for d in result.dimensions
-            ],
-            "strengths": result.strengths,
-            "weaknesses": result.weaknesses,
-            "danger_signals": result.danger_signals,
-            "improvements": result.improvements,
-            "recommended_projects": result.recommended_projects,
-            "interviewer_comment": result.interviewer_comment,
-        }
+        return {"success": True, **result}
 
     @app.post("/api/interview/start")
-    async def interview_start(
+    async def api_interview_start(
         mode: str = Form(default="高压"),
         target_role: str = Form(default="产品经理"),
-        session_id: str = Form(default=""),
     ):
         """Start a new mock interview."""
-        import uuid
-        sid = session_id or str(uuid.uuid4())[:8]
-        session = mock_interviewer.start_session(mode, target_role)
-        active_sessions[sid] = session
-
-        opening = session.history[0].content if session.history else "开始面试。"
+        sid = str(uuid.uuid4())[:8]
+        result = start_interview(mode=mode, target_role=target_role)
+        active_sessions[sid] = {
+            "mode": mode,
+            "role": target_role,
+            "history": [{"role": "interviewer", "content": result.get("opening", "")}],
+            "pressure": 30 if mode == "温和" else (55 if mode == "高压" else (75 if mode == "地狱" else 15)),
+        }
         return {
             "success": True,
             "session_id": sid,
-            "message": opening,
-            "phase": session.current_phase,
+            "message": result.get("opening", "开始面试。"),
+            "mode": mode,
         }
 
     @app.post("/api/interview/respond")
-    async def interview_respond(
+    async def api_interview_respond(
         session_id: str = Form(...),
         answer: str = Form(...),
     ):
         """Send candidate answer and get interviewer response."""
         if session_id not in active_sessions:
-            return {"success": False, "error": "会话已过期，请重新开始面试"}
+            return {"success": False, "error": "Session not found"}
 
         session = active_sessions[session_id]
-        session = mock_interviewer.respond(session, answer)
-        active_sessions[session_id] = session
+        session["history"].append({"role": "candidate", "content": answer})
 
-        last_msg = session.history[-1]
+        from modules.mock_interviewer import calculate_pressure
+        pres = calculate_pressure(answer, session["mode"], session["history"], session["pressure"])
+        session["pressure"] = pres["pressure"]
+
+        resp = respond(
+            user_answer=answer, mode=session["mode"],
+            target_role=session.get("role", "产品经理"),
+            chat_history=session["history"],
+        )
+        msg = resp.get("interviewer_message", "") if isinstance(resp, dict) else str(resp)
+        session["history"].append({"role": "interviewer", "content": msg})
+
+        is_complete = resp.get("is_complete", False) if isinstance(resp, dict) else False
         return {
             "success": True,
-            "message": last_msg.content if last_msg.role == "interviewer" else "",
-            "phase": session.current_phase,
-            "is_complete": session.current_phase == "closing",
+            "message": msg,
+            "pressure": pres,
+            "is_complete": is_complete,
         }
 
     @app.post("/api/interview/evaluate")
-    async def interview_evaluate(session_id: str = Form(...)):
+    async def api_interview_evaluate(
+        session_id: str = Form(...),
+    ):
         """Evaluate completed interview."""
         if session_id not in active_sessions:
-            return {"success": False, "error": "会话已过期"}
+            return {"success": False, "error": "Session not found"}
 
         session = active_sessions[session_id]
-        result = mock_interviewer.evaluate(session)
-
-        return {
-            "success": True,
-            "overall_score": result.overall_score,
-            "dimension_scores": result.dimension_scores,
-            "strengths": result.strengths,
-            "weaknesses": result.weaknesses,
-            "verdict": result.verdict,
-            "advice": result.advice,
-        }
+        result = evaluate(
+            session["history"], session["mode"],
+            session.get("role", "产品经理"),
+        )
+        return {"success": True, **result}
 
     @app.post("/api/growth-plan")
-    async def growth_plan(
+    async def api_growth_plan(
         school: str = Form(default=""),
         major: str = Form(default=""),
         target_role: str = Form(default="产品经理"),
         grade: str = Form(default="大三"),
-        project_level: int = Form(default=5),
-        product_sense: int = Form(default=5),
-        growth_sense: int = Form(default=5),
-        data_level: int = Form(default=5),
-        ai_level: int = Form(default=5),
-        content_level: int = Form(default=5),
+        project_level: str = Form(default="5"),
+        product_sense: str = Form(default="5"),
+        growth_sense: str = Form(default="5"),
+        data_level: str = Form(default="5"),
+        ai_level: str = Form(default="5"),
+        content_level: str = Form(default="5"),
         existing_projects: str = Form(default=""),
-        time_commitment: str = Form(default="每天3-4小时"),
+        time_commitment: str = Form(default="每天 3-4 小时"),
     ):
         """Generate growth plan."""
-        plan = growth_advisor.generate_plan(
-            school=school,
-            major=major,
-            target_role=target_role,
-            grade=grade,
-            project_level=project_level,
-            product_sense=product_sense,
-            growth_sense=growth_sense,
-            data_level=data_level,
-            ai_level=ai_level,
-            content_level=content_level,
+        result = generate_plan(
+            school=school, major=major, target_role=target_role,
+            grade=grade, project_level=int(project_level),
+            product_sense=int(product_sense), growth_sense=int(growth_sense),
+            data_level=int(data_level), ai_level=int(ai_level),
+            content_level=int(content_level),
             existing_projects=existing_projects,
             time_commitment=time_commitment,
         )
-        output = growth_advisor.format_output(plan)
-        return {"success": True, "plan": output}
+        return {"success": True, "plan": result}
 
-    @app.get("/api/demo")
-    async def demo():
-        """Run demo with sample data and return all results."""
-        results = {}
+    @app.post("/api/bs-detect")
+    async def api_bs_detect(text: str = Form(...)):
+        """Detect corporate BS in text."""
+        result = detect_bs(text)
+        return {"success": True, **result}
 
-        # JD Analysis demo
-        sample_jd = """
-        负责抖音内容生态的产品规划和设计
-        深入理解内容消费场景，挖掘用户需求
-        数据驱动，通过AB实验验证产品方案
-        有Owner意识，结果导向，抗压能力强
-        熟悉AI工具者优先
-        """
-        jd_result = jd_analyzer.analyze(sample_jd, "产品经理-抖音内容生态")
-        results["jd_analysis"] = jd_analyzer.format_output(jd_result)
+    @app.post("/api/persona")
+    async def api_persona(
+        resume: str = Form(default=""),
+        projects: str = Form(default=""),
+        content_exp: str = Form(default=""),
+    ):
+        """Generate internet persona."""
+        result = generate_persona(resume_text=resume, projects=projects, content_experience=content_exp)
+        return {"success": True, **result}
 
-        # Offer prediction demo
-        pred_result = offer_predictor.predict(
-            school="某985大学",
-            major="计算机科学与技术",
-            degree="本科",
-            target_role="产品经理",
-            skills="Python, SQL, 数据分析, Figma, AI工具(Trae, Cursor)",
-            projects="用AI从0到1做了校园二手交易小程序，DAU 2000+，留存45%，用AI完成前端开发和用户调研",
-            internships="中型互联网公司产品实习生，负责用户增长，DAU提升30%",
-            content_experience="运营产品分析公众号，粉丝5000+，单篇最高阅读2万",
-            ai_capability="深度使用AI：Trae写代码，Cursor做产品分析，效率提升3倍+",
-        )
-        results["offer_prediction"] = offer_predictor.format_output(pred_result)
+    @app.post("/api/authenticity")
+    async def api_authenticity(text: str = Form(...)):
+        """Detect project authenticity."""
+        result = detect_authenticity(text)
+        return {"success": True, **result}
 
-        # Growth plan demo
-        plan = growth_advisor.generate_plan(
-            school="某985大学",
-            major="计算机科学",
-            target_role="产品经理",
-            project_level=6,
-            product_sense=5,
-            growth_sense=4,
-            data_level=6,
-            ai_level=5,
-            content_level=4,
-        )
-        results["growth_plan"] = growth_advisor.format_output(plan)
+    @app.post("/api/confusion-diagnosis")
+    async def api_confusion_diagnosis(request: Request):
+        """Career confusion diagnosis from 4 answers."""
+        body = await request.json()
+        answers = body.get("answers", [])
+        result = buildConfusionDiagnosis(answers)
+        return {"success": True, "diagnosis": result}
 
-        return {"success": True, "demo": results}
+    @app.post("/api/career-match")
+    async def api_career_match(profile: str = Form(...)):
+        """Match student profile to top 3 career directions."""
+        result = match_career(profile)
+        return {"success": True, **result}
+
+    @app.post("/api/demo")
+    async def api_demo():
+        """Demo mode — run full pipeline with sample data."""
+        sample_jd = "产品经理-抖音内容生态，负责创作者工具和数据驱动的增长策略"
+        sample_resume = "某985大学计算机科学专业本科，两个课程项目，一段小厂产品实习，参与过用户增长活动"
+        jd_result = analyze_jd(sample_jd, job_title="产品经理")
+        offer_result = predict_offer(resume_text=sample_resume, jd_text=sample_jd, target_role="产品经理")
+        return {"success": True, "jd": jd_result, "offer": offer_result}
+
+    @app.post("/api/group/start")
+    async def api_group_start(
+        role: str = Form(default="产品经理"),
+        other_roles: str = Form(default="后端开发,运营,设计"),
+        topic: str = Form(default="如何提升一款社交App的次日留存"),
+    ):
+        """Start a group interview session."""
+        others = [r.strip() for r in other_roles.split(",") if r.strip()][:3]
+        result = start_group_interview(role, others, topic)
+        gid = result.get("session_id", str(uuid.uuid4())[:8])
+        active_group_sessions[gid] = result
+        active_group_sessions[gid]["session_id"] = gid
+        return {
+            "success": True,
+            "session_id": gid,
+            "opening": result.get("opening", ""),
+            "all_roles": result.get("all_roles", []),
+            "max_rounds": result.get("max_rounds", 5),
+        }
+
+    @app.post("/api/group/respond")
+    async def api_group_respond(
+        session_id: str = Form(...),
+        answer: str = Form(...),
+    ):
+        """User speaks, AI roles respond."""
+        if session_id not in active_group_sessions:
+            return {"success": False, "error": "Session not found"}
+        session = active_group_sessions[session_id]
+        result = group_respond(session, answer)
+        result["success"] = True
+        return result
+
+    @app.post("/api/group/evaluate")
+    async def api_group_evaluate(
+        session_id: str = Form(...),
+    ):
+        """Evaluate group interview."""
+        if session_id not in active_group_sessions:
+            return {"success": False, "error": "Session not found"}
+        result = group_evaluate(active_group_sessions[session_id])
+        result["success"] = True
+        return result
+    async def api_export_resume(
+        resume_text: str = Form(...),
+        format: str = Form(default="pdf"),
+    ):
+        """Export resume to PDF or Word."""
+        from components.export import export_resume
+        try:
+            path = export_resume(resume_text, format)
+            return {"success": True, "path": path, "format": format}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    @app.get("/api/download-resume")
+    async def api_download_resume(path: str = ""):
+        """Download exported resume file."""
+        if not path or not os.path.exists(path):
+            return {"success": False, "error": "File not found"}
+        filename = os.path.basename(path)
+        return FileResponse(path, filename=filename)
 
     return app
-
 
 def get_html_template() -> str:
     """Return the complete HTML template with embedded CSS and JS."""
@@ -285,6 +319,23 @@ def get_html_template() -> str:
     <style>{CSS}</style>
 </head>
 <body>
+    <div id="guideModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;align-items:center;justify-content:center;z-index:1000;">
+        <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);" onclick="closeGuide()"></div>
+        <div style="position:relative;max-width:520px;width:90%;background:var(--bg-card);border:1px solid var(--border-default);border-radius:var(--radius-xl);padding:32px;z-index:1001;">
+            <h2 style="margin-top:0;">🎯 Welcome to ByteDance Offer Copilot</h2>
+            <p style="color:var(--text-secondary);">AI career coach. P8 interviewer perspective, helping you become who ByteDance really wants.</p>
+            <div style="margin:20px 0;">
+                <div style="padding:10px 14px;margin-bottom:8px;background:var(--bg-secondary);border-radius:var(--radius-md);font-size:14px;color:var(--text-secondary);">1. Start with diagnosis to find out where to begin</div>
+                <div style="padding:10px 14px;margin-bottom:8px;background:var(--bg-secondary);border-radius:var(--radius-md);font-size:14px;color:var(--text-secondary);">2. Upload a JD for analysis to see what the role really tests</div>
+                <div style="padding:10px 14px;margin-bottom:8px;background:var(--bg-secondary);border-radius:var(--radius-md);font-size:14px;color:var(--text-secondary);">3. Upload your resume for Offer probability prediction</div>
+                <div style="padding:10px 14px;margin-bottom:8px;background:var(--bg-secondary);border-radius:var(--radius-md);font-size:14px;color:var(--text-secondary);">4. Rewrite your resume from student-speak to ByteDance style</div>
+                <div style="padding:10px 14px;margin-bottom:8px;background:var(--bg-secondary);border-radius:var(--radius-md);font-size:14px;color:var(--text-secondary);">5. Do a mock interview — you can only practice interview skills</div>
+            </div>
+            <div style="text-align:right;">
+                <button class="btn btn-primary" onclick="closeGuide()">Get Started</button>
+            </div>
+        </div>
+    </div>
     <div class="app-container">
         <!-- Header -->
         <header class="header">
@@ -329,6 +380,9 @@ def get_html_template() -> str:
             <button class="tab-btn" data-tab="predict">📊 Offer预测</button>
             <button class="tab-btn" data-tab="rewrite">🔥 简历重构</button>
             <button class="tab-btn" data-tab="interview">🎤 模拟面试</button>
+            <button class="tab-btn" data-tab="confusion">🧭 迷茫诊断</button>
+            <button class="tab-btn" data-tab="career">🎯 岗位匹配</button>
+            <button class="tab-btn" data-tab="group">👥 群面模拟</button>
             <button class="tab-btn" data-tab="growth">🗺️ 成长路线</button>
         </nav>
 
@@ -493,6 +547,7 @@ def get_html_template() -> str:
                             <option>温和</option>
                             <option selected>高压</option>
                             <option>地狱</option>
+                            <option>暖心</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -540,6 +595,104 @@ def get_html_template() -> str:
         </section>
 
         <!-- Tab: Growth Advisor -->
+        <!-- Confusion Diagnosis Tab -->
+        <section class="tab-content" id="tab-confusion" style="display:none">
+            <div class="card">
+                <div class="card-body">
+                    <h3>🧭 Career Confusion Diagnosis</h3>
+                    <p style="color:var(--text-secondary);margin-bottom:16px;">Answer 4 questions to find your highest-priority action.</p>
+                    <div id="confusionQuestion" style="margin-bottom:16px;"></div>
+                    <div id="confusionChoices" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;"></div>
+                    <button class="btn btn-secondary" id="confusionRestart" onclick="restartConfusion()" style="display:none;">🔄 Restart</button>
+                    <div class="result-panel" id="confusionResult">
+                        <div id="confusionResultContent" class="markdown-content"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Career Match Tab -->
+        <section class="tab-content" id="tab-career" style="display:none">
+            <div class="card">
+                <div class="card-body">
+                    <h3>🎯 Career Match Analysis</h3>
+                    <p style="color:var(--text-secondary);margin-bottom:16px;">Describe your background and get top 3 recommended career directions.</p>
+                    <textarea id="careerProfile" class="form-textarea" rows="6" placeholder="Describe your background: skills, projects, internships, school, major, interests..."></textarea>
+                    <div style="margin-top:12px;">
+                        <button class="btn btn-primary" onclick="matchCareer()">🎯 Match</button>
+                        <button class="btn btn-secondary" onclick="fillCareerDemo()" style="margin-left:8px;">📋 Demo</button>
+                    </div>
+                    <div class="result-panel" id="careerResult">
+                        <div id="careerResultContent" class="markdown-content"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Group Interview Tab -->
+        <section class="tab-content" id="tab-group" style="display:none">
+            <div class="card">
+                <div class="card-header">
+                    <span class="emoji-icon">👥</span>
+                    <span class="card-title">群面模拟 — 无领导小组讨论</span>
+                </div>
+                <div class="card-body">
+                    <p>你扮演一个角色，AI 扮演 2-3 个其他角色。5 轮讨论后给出完整分析。</p>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top:16px">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">你的角色</label>
+                        <select class="form-select" id="groupRole">
+                            <option>产品经理</option>
+                            <option>后端开发</option>
+                            <option>前端开发</option>
+                            <option>算法工程师</option>
+                            <option>运营</option>
+                            <option>设计</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">AI 角色（逗号分隔，最多3个）</label>
+                        <input type="text" class="form-input" id="groupOthers" value="后端开发, 运营, 设计" placeholder="后端开发, 运营, 设计">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">讨论主题</label>
+                        <input type="text" class="form-input" id="groupTopic" value="如何提升一款社交App的次日留存" placeholder="讨论主题">
+                    </div>
+                    <div class="form-group" style="display:flex;align-items:flex-end">
+                        <button class="btn btn-primary" onclick="startGroup()" id="startGroupBtn">
+                            👥 开始群面
+                        </button>
+                        <button class="btn btn-danger" onclick="endGroup()" id="endGroupBtn" style="display:none;margin-left:8px">
+                            结束并分析
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-container" style="margin-top:16px;display:none" id="groupChatContainer">
+                <div class="chat-header">
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <span class="emoji-icon">👥</span>
+                        <span style="font-weight:600">无领导小组讨论 — <span id="groupRoundLabel">第 1/5 轮</span></span>
+                    </div>
+                </div>
+                <div class="chat-messages" id="groupChatMessages"></div>
+                <div class="chat-input-area">
+                    <input type="text" class="chat-input" id="groupChatInput" placeholder="输入你的发言..." onkeydown="if(event.key==='Enter')sendGroupAnswer()">
+                    <button class="btn btn-primary" onclick="sendGroupAnswer()">发言</button>
+                </div>
+            </div>
+
+            <div class="result-panel" id="groupResult">
+                <h2>📊 群面分析报告</h2>
+                <div id="groupResultContent" class="markdown-content"></div>
+            </div>
+        </section>
+
         <section class="tab-content" id="tab-growth" style="display:none">
             <div class="card">
                 <div class="card-header">
@@ -617,6 +770,17 @@ def get_html_template() -> str:
     </div>
 
     <script>
+        // ===== Guide Modal =====
+        (function() {{
+            if (!localStorage.getItem('hasSeenGuide')) {{
+                document.getElementById('guideModal').style.display = 'flex';
+                localStorage.setItem('hasSeenGuide', 'true');
+            }}
+        }})();
+        function closeGuide() {{
+            document.getElementById('guideModal').style.display = 'none';
+        }}
+
         // ===== Tab Switching =====
         document.querySelectorAll('.tab-btn').forEach(btn => {{
             btn.addEventListener('click', () => {{
@@ -905,6 +1069,97 @@ def get_html_template() -> str:
             document.getElementById('endInterviewBtn').style.display = 'none';
         }}
 
+        // ===== Group Interview =====
+        let groupSessionId = '';
+        let groupRound = 0;
+        let groupMaxRounds = 5;
+        let groupAllRoles = [];
+
+        async function startGroup() {{
+            var role = document.getElementById('groupRole').value;
+            var others = document.getElementById('groupOthers').value;
+            var topic = document.getElementById('groupTopic').value;
+
+            var result = await postForm('/api/group/start', {{
+                role: role, other_roles: others, topic: topic
+            }});
+
+            if (result.success) {{
+                groupSessionId = result.session_id;
+                groupRound = 0;
+                groupMaxRounds = result.max_rounds || 5;
+                groupAllRoles = result.all_roles || [];
+
+                document.getElementById('groupChatContainer').style.display = 'flex';
+                document.getElementById('startGroupBtn').style.display = 'none';
+                document.getElementById('endGroupBtn').style.display = 'inline-flex';
+                document.getElementById('groupRoundLabel').textContent = '第 1/' + groupMaxRounds + ' 轮';
+                document.getElementById('groupChatMessages').innerHTML = '';
+                hideResult('groupResult');
+
+                if (result.opening) {{
+                    addGroupMessage('system', result.opening);
+                }}
+            }}
+        }}
+
+        function addGroupMessage(role, content) {{
+            var messagesDiv = document.getElementById('groupChatMessages');
+            var avatar = role === 'system' ? '📋' : '💬';
+            var roleName = role === 'system' ? '开场引导' : role;
+            var msgDiv = document.createElement('div');
+            msgDiv.className = 'chat-message ' + (role === 'system' ? 'interviewer' : 'candidate');
+            msgDiv.innerHTML = '<div class="chat-avatar">' + avatar + '</div><div class="chat-bubble"><strong>' + roleName + '</strong><br>' + content + '</div>';
+            messagesDiv.appendChild(msgDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }}
+
+        async function sendGroupAnswer() {{
+            var input = document.getElementById('groupChatInput');
+            var answer = input.value.trim();
+            if (!answer || !groupSessionId) return;
+
+            groupRound++;
+            document.getElementById('groupRoundLabel').textContent = '第 ' + groupRound + '/' + groupMaxRounds + ' 轮';
+            addGroupMessage('你', answer);
+            input.value = '';
+
+            var result = await postForm('/api/group/respond', {{
+                session_id: groupSessionId, answer: answer
+            }});
+
+            if (result.success && result.responses) {{
+                var responses = result.responses;
+                responses.forEach(function(r, i) {{
+                    setTimeout(function() {{ addGroupMessage(r.role, r.content); }}, (i + 1) * 600);
+                }});
+            }}
+
+            if (result.is_complete || groupRound >= groupMaxRounds) {{
+                setTimeout(function() {{ document.getElementById('endGroupBtn').click(); }}, 1500);
+            }}
+        }}
+
+        async function endGroup() {{
+            if (!groupSessionId) return;
+
+            var result = await postForm('/api/group/evaluate', {{
+                session_id: groupSessionId
+            }});
+
+            if (result.success && result.markdown) {{
+                renderMarkdown('groupResultContent', result.markdown);
+                showResult('groupResult');
+                document.getElementById('groupResult').scrollIntoView({{ behavior: 'smooth' }});
+            }}
+
+            groupSessionId = '';
+            groupRound = 0;
+            document.getElementById('startGroupBtn').style.display = 'inline-flex';
+            document.getElementById('endGroupBtn').style.display = 'none';
+            document.getElementById('groupChatContainer').style.display = 'none';
+        }}
+
         // ===== Growth Advisor =====
         async function getGrowthPlan() {{
             const result = await postForm('/api/growth-plan', {{
@@ -922,12 +1177,91 @@ def get_html_template() -> str:
                 document.getElementById('growthResult').scrollIntoView({{ behavior: 'smooth' }});
             }}
         }}
+
+        // ===== Confusion Diagnosis =====
+        let confusionStep = 0;
+        const confusionAnswers = [];
+        const confusionQuestions = [
+            {{ text: 'Do you have a clear job direction?', choices: ['Yes', 'No'] }},
+            {{ text: 'Have you written a resume you are satisfied with?', choices: ['Yes', 'No'] }},
+            {{ text: 'Have you experienced technical/product interviews?', choices: ['Yes', 'No'] }},
+            {{ text: 'What is your biggest weakness?', choices: ['Unclear about roles', 'Bad at resume writing', 'Interview anxiety', 'Projects not good enough'] }},
+        ];
+
+        function showConfusionQuestion() {{
+            if (confusionStep >= confusionQuestions.length) {{
+                fetch('/api/confusion-diagnosis', {{
+                    method: 'POST',
+                    headers: {{'Content-Type': 'application/json'}},
+                    body: JSON.stringify({{answers: confusionAnswers}})
+                }}).then(r => r.json()).then(data => {{
+                    if (data.success && data.diagnosis) {{
+                        renderMarkdown('confusionResultContent', data.diagnosis.markdown);
+                        showResult('confusionResult');
+                    }}
+                }});
+                document.getElementById('confusionQuestion').innerHTML = '';
+                document.getElementById('confusionChoices').innerHTML = '';
+                document.getElementById('confusionRestart').style.display = 'inline-block';
+                return;
+            }}
+            const q = confusionQuestions[confusionStep];
+            document.getElementById('confusionQuestion').innerHTML = '<p style="font-size:16px;font-weight:600;">Q' + (confusionStep+1) + ': ' + q.text + '</p>';
+            document.getElementById('confusionChoices').innerHTML = q.choices.map(function(c) {{
+                return '<button class="btn btn-secondary" onclick="answerConfusion(\'' + c + '\')">' + c + '</button>';
+            }}).join(' ');
+        }}
+
+        function answerConfusion(answer) {{
+            confusionAnswers.push(answer);
+            confusionStep++;
+            showConfusionQuestion();
+        }}
+
+        function restartConfusion() {{
+            confusionStep = 0;
+            confusionAnswers.length = 0;
+            hideResult('confusionResult');
+            document.getElementById('confusionRestart').style.display = 'none';
+            showConfusionQuestion();
+        }}
+
+        // Trigger confusion on tab switch
+        (function() {{
+            var btn = document.querySelector('[data-tab="confusion"]');
+            if (btn) btn.addEventListener('click', function() {{
+                if (confusionStep === 0 && confusionAnswers.length === 0) showConfusionQuestion();
+            }});
+        }})();
+
+        // ===== Career Match =====
+        function matchCareer() {{
+            var profile = document.getElementById('careerProfile').value.trim();
+            if (!profile) {{ alert('Please describe your background first'); return; }}
+            hideResult('careerResult');
+            var formData = new FormData();
+            formData.append('profile', profile);
+            fetch('/api/career-match', {{method: 'POST', body: formData}})
+                .then(r => r.json()).then(data => {{
+                    if (data.success && data.markdown) {{
+                        renderMarkdown('careerResultContent', data.markdown);
+                        showResult('careerResult');
+                    }}
+                }});
+        }}
+
+        function fillCareerDemo() {{
+            document.getElementById('careerProfile').value = 'CS major at a top university, two course projects (campus marketplace, note-taking app), one startup backend internship, Python/Go/MySQL skills, 200 LeetCode problems solved, also interested in product management';
+        }}
+
     </script>
 </body>
 </html>"""
 
 
 # Create the app instance
+app = create_app()
+
 app = create_app()
 
 

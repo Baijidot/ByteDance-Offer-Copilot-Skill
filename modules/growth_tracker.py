@@ -16,7 +16,7 @@ import json
 import os
 from datetime import datetime, timedelta
 from typing import Optional
-from utils import loadGrowthData, saveGrowthData, callLlm
+from utils import loadGrowthData, saveGrowthData, callLlm, safeCallLlm
 
 
 def record_session(
@@ -301,3 +301,74 @@ def _render_growth_markdown(report: dict) -> str:
 
     lines.append("")
     return "\n".join(lines)
+
+
+# ═══════════════════════════════════════════════════
+# Interview Session Persistence
+# ═══════════════════════════════════════════════════
+
+def save_interview_session(
+    user_id: str,
+    session_id: str,
+    chat_history: list,
+    pressure_sequence: list = None,
+    evaluation: dict = None,
+    mode: str = "高压",
+    target_role: str = "产品经理",
+) -> dict:
+    """Save a complete interview session to disk."""
+    session_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "user_data")
+    os.makedirs(session_dir, exist_ok=True)
+
+    session_file = os.path.join(session_dir, f"{session_id}.json")
+    session_data = {
+        "session_id": session_id,
+        "user_id": user_id,
+        "mode": mode,
+        "target_role": target_role,
+        "created_at": datetime.now().isoformat(),
+        "last_active": datetime.now().isoformat(),
+        "chat_history": chat_history,
+        "pressure_sequence": pressure_sequence or [],
+        "evaluation": evaluation,
+        "is_complete": evaluation is not None,
+    }
+    with open(session_file, "w", encoding="utf-8") as f:
+        json.dump(session_data, f, ensure_ascii=False, indent=2)
+
+    # Update index in growth_data.json
+    storage = loadGrowthData()
+    user = storage["users"].setdefault(user_id, {})
+    sessions = user.setdefault("interview_sessions", [])
+    # Remove existing entry for this session_id
+    sessions = [s for s in sessions if s.get("session_id") != session_id]
+    sessions.append({
+        "session_id": session_id,
+        "created_at": session_data["created_at"],
+        "mode": mode,
+        "target_role": target_role,
+        "is_complete": session_data["is_complete"],
+        "round_count": len([m for m in chat_history if m.get("role") == "candidate"]),
+    })
+    user["interview_sessions"] = sessions
+    storage["users"][user_id] = user
+    saveGrowthData(storage)
+
+    return {"success": True, "session_id": session_id}
+
+
+def load_interview_session(session_id: str) -> dict:
+    """Load a saved interview session from disk."""
+    session_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "user_data")
+    session_file = os.path.join(session_dir, f"{session_id}.json")
+    if not os.path.exists(session_file):
+        return {"error": f"Session {session_id} not found"}
+    with open(session_file, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def list_interview_sessions(user_id: str) -> list:
+    """List all interview sessions for a user (from index)."""
+    storage = loadGrowthData()
+    user = storage["users"].get(user_id, {})
+    return user.get("interview_sessions", [])

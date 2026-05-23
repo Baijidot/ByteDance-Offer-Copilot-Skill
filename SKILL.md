@@ -1,14 +1,15 @@
 ---
 name: bytedance-coach
 description: >-
-  字节跳动校招AI职业教练。JD拆解、Offer概率预测、简历互联网化重构、
-  温和/高压/地狱模拟面试、面评报告、学生空话/黑话检测与翻译、
-  矛盾检测、互联网人格画像、项目真实性审查、成长路线规划。
+  字节跳动校招AI职业教练。JD拆解、Offer概率预测、简历互联网化重构（含PDF/Word导出）、
+  温和/高压/地狱/暖心四模式模拟面试、面评报告、学生空话/黑话检测与翻译、
+  矛盾检测、互联网人格画像、项目真实性审查、成长路线规划、求职迷茫诊断、
+  岗位匹配度分析、无领导小组群面模拟。
   当用户提到字节跳动、校招、简历、面试、JD、Offer、产品经理、
-  黑话、学生空话、模拟面试、压力面、面评等关键词时使用此技能。
+  黑话、学生空话、模拟面试、压力面、面评、群面、迷茫、岗位匹配等关键词时使用此技能。
 ---
 
-# ByteDance Offer Copilot v2.1 — AI 互联网职业教练
+# ByteDance Offer Copilot v2.2 — AI 互联网职业教练
 
 ## 描述
 
@@ -23,13 +24,16 @@ description: >-
 
 - 用户需要分析岗位 JD（支持文件路径 / URL / 直接粘贴）
 - 用户想预测自己拿到 Offer 的概率
-- 用户需要把学生腔的简历重构成互联网表达
-- 用户想进行模拟面试（温和/高压/地狱三种模式）
+- 用户需要把学生腔的简历重构成互联网表达，并导出 PDF/Word
+- 用户想进行模拟面试（温和/高压/地狱/暖心四种模式）
 - 用户需要检测简历/回答中的学生空话和黑话
 - 用户需要生成正式的面评报告
 - 用户想了解自己的互联网能力画像
 - 用户想检测项目的真实性（学生Demo vs 真实产品）
 - 用户需要 AI 时代的成长路线规划
+- 用户不确定自己该从哪里开始，需要迷茫诊断
+- 用户想看自己适合什么岗位方向
+- 用户想模拟无领导小组群面讨论
 
 ## 指令
 
@@ -47,6 +51,7 @@ description: >-
 | JD 拆解 | `from modules import analyze_jd` → `analyze_jd(input_text)` |
 | Offer 预测 | `from modules import predict_offer` → `predict_offer(resume_text=..., jd_text=..., target_role=...)` |
 | 简历重构 | `from modules import rewrite_project, rewrite_intro, portfolio_advice` |
+| 简历导出 | `from components.export import export_resume` → `export_resume(text, format="pdf")` |
 | 模拟面试 | `from modules import start_interview, respond, evaluate` |
 | 压力值 | `from modules import calculate_pressure, get_pressure_display` |
 | 面评报告 | `from modules import generate_feedback` |
@@ -56,6 +61,10 @@ description: >-
 | 项目真实性 | `from modules import detect_authenticity` |
 | 成长路线 | `from modules import generate_plan` |
 | 成长追踪 | `from modules import record_session, get_growth_report` |
+| 迷茫诊断 | `from utils import buildConfusionDiagnosis` → `buildConfusionDiagnosis(answers)` |
+| 岗位匹配 | `from modules import match_career` → `match_career(profile)` |
+| 群面模拟 | `from modules import start_group_interview, group_respond, group_evaluate` |
+| 面试持久化 | `from modules import save_interview_session, load_interview_session` |
 
 ### 面试模块详细流程
 
@@ -76,6 +85,7 @@ feedback = generate_feedback(chat_history, target_role="产品经理", mode="地
 - **温和**：正常节奏，追问 2-3 层
 - **高压**：连续追问 4-5 层，矛盾检测，有压迫感
 - **地狱**：追问 7 层以上，质疑一切，记住每句话找出矛盾，P8 拷打
+- **暖心**：鼓励式提问，帮助发现潜力，建设性反馈，每轮具体正向肯定
 
 ### 输出原则
 

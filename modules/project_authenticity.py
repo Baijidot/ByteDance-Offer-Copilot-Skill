@@ -9,7 +9,7 @@ Output: authenticity score + specific risk flags + what's missing.
 Style: brutally honest, internet industry standard.
 """
 
-from utils import callLlm
+from utils import callLlm, safeCallLlm
 import re
 
 SYSTEM_PROMPT = """你是字节跳动的技术评审。你看过 10000+ 个项目，能在 30 秒内分辨：
@@ -93,7 +93,7 @@ def detect_authenticity(project_text: str) -> dict:
 - 毒舌、直接、不留情面
 - authenticity_score 必须严格——大多数学生项目应该在 30-50 分"""
 
-    result = callLlm(prompt, SYSTEM_PROMPT, output_format="json")
+    result = safeCallLlm(prompt, SYSTEM_PROMPT, output_format="json")
 
     if isinstance(result, dict) and "_trait" not in result:
         # Merge rule flags

@@ -10,6 +10,7 @@ API call via the configured provider.
 import json
 import os
 import re
+import time
 from typing import Any, Union
 
 
@@ -33,19 +34,19 @@ def callLlm(prompt: str, system_prompt: str = "", output_format: str = "json") -
     # Try standalone API mode (provider-agnostic)
     apiKey = os.environ.get("TRADE_API_KEY") or os.environ.get("LLM_API_KEY")
     if apiKey:
-        try:
-            sdk = __import__("anthropic")
-            client = sdk.Anthropic(api_key=apiKey)
-            response = client.messages.create(
-                model=os.environ.get("LLM_MODEL", "deepseek-v4-pro"),
-                max_tokens=4096,
-                system=system_prompt or getSystemPrompt(),
-                messages=[{"role": "user", "content": prompt}],
-            )
-            text = response.content[0].text
-            return parseResponse(text, output_format)
-        except Exception:
-            pass
+        start = time.time()
+        sdk = __import__("anthropic")
+        client = sdk.Anthropic(api_key=apiKey)
+        response = client.messages.create(
+            model=os.environ.get("LLM_MODEL", "deepseek-v4-pro"),
+            max_tokens=4096,
+            system=system_prompt or getSystemPrompt(),
+            messages=[{"role": "user", "content": prompt}],
+        )
+        elapsed = (time.time() - start) * 1000
+        text = response.content[0].text
+        _logPerformance(len(prompt), elapsed, True)
+        return parseResponse(text, output_format)
 
     # Fallback: return structured prompt for platform to process
     return {
@@ -54,6 +55,64 @@ def callLlm(prompt: str, system_prompt: str = "", output_format: str = "json") -
         "prompt": prompt,
         "output_format": output_format,
     }
+
+
+def _logPerformance(prompt_len: int, response_ms: float, success: bool) -> None:
+    """Log LLM call performance to JSONL file."""
+    try:
+        from datetime import datetime
+        log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
+        os.makedirs(log_dir, exist_ok=True)
+        log_path = os.path.join(log_dir, "performance.jsonl")
+        entry = {
+            "timestamp": datetime.now().isoformat(),
+            "prompt_length": prompt_len,
+            "response_time_ms": round(response_ms, 2),
+            "success": success,
+        }
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
+
+
+def safeCallLlm(prompt: str, system_prompt: str = "", output_format: str = "json",
+                fallback: dict = None, timeout: int = 60) -> Union[dict, str]:
+    """
+    Call LLM with exception handling and structured fallback.
+
+    On failure, returns a fallback dict with error info and friendly retry hint.
+    In Trae Solo mode, delegates to callLlm directly (platform handles execution).
+    """
+    apiKey = os.environ.get("TRADE_API_KEY") or os.environ.get("LLM_API_KEY")
+
+    try:
+        result = callLlm(prompt, system_prompt, output_format)
+    except Exception as e:
+        result = None
+        if fallback is not None:
+            fallback["_error"] = str(e)
+            fallback["_retry_hint"] = "LLM调用失败，请重试或检查API配置"
+            return fallback
+        if output_format != "json":
+            return f"[错误] LLM调用失败: {str(e)}。请重试或输入更短的文本。"
+        return {
+            "error": str(e),
+            "markdown": ">  AI教练暂时不可用：" + str(e) + "\n>\n> 请稍后重试。如果持续失败，请检查 TRADE_API_KEY 环境变量。"
+        }
+
+    # callLlm returned _trait marker — no real LLM call happened (no API key, not in Trae Solo)
+    if isinstance(result, dict) and "_trait" in result:
+        if fallback is not None:
+            fallback["_error"] = "LLM未配置"
+            fallback["_retry_hint"] = "请设置 TRADE_API_KEY 环境变量或在 Trae Solo 中运行"
+            return fallback
+        return {
+            "error": "LLM未配置",
+            "markdown": ">  AI教练未配置\n>\n> 请设置 `TRADE_API_KEY` 环境变量，或在 Trae Solo 平台中运行此 Skill。"
+        }
+
+    return result
 
 
 def parseResponse(text: str, fmt: str) -> Any:
@@ -186,6 +245,85 @@ def getSystemPrompt() -> str:
 记住：你不是在帮用户「美化」任何东西。
 你是在帮用户「成为」字节真正想要的那种人。
 这之间有本质区别。"""
+
+
+# ═══════════════════════════════════════════════════════════
+# Confusion Diagnosis — Rule-based recommendation engine
+# ═══════════════════════════════════════════════════════════
+
+def buildConfusionDiagnosis(answers: list) -> dict:
+    """
+    基于 4 题答案生成求职诊断清单。
+
+    Args:
+        answers: [q1, q2, q3, q4] where:
+            q1: 是否有明确岗位方向? ("Yes"/"No")
+            q2: 是否写过满意的简历? ("Yes"/"No")
+            q3: 是否经历过面试? ("Yes"/"No")
+            q4: 最大短板? ("岗位不了解"/"简历不会写"/"面试紧张"/"项目不够好")
+
+    Returns:
+        dict with "markdown" key containing prioritized action checklist
+    """
+    q1, q2, q3, q4 = answers if len(answers) >= 4 else ["No"] * 4
+    items = []
+
+    if q1 == "No" or q4 == "岗位不了解":
+        items.append({
+            "priority": "P0",
+            "module": "JD深度拆解 (选项1) + 岗位匹配度分析 (新功能)",
+            "reason": "你还不清楚岗位真正要什么——先看JD，再决定方向。岗位匹配度可以根据你的背景推荐最适合的方向。",
+        })
+
+    if q2 == "No" or q4 == "简历不会写":
+        items.append({
+            "priority": "P0" if q2 == "No" else "P1",
+            "module": "简历重构 + 黑话检测 (选项3)",
+            "reason": "你的简历可能充满学生腔和无效表达，面试官一眼就刷掉。黑话检测能帮你发现学生腔。",
+        })
+
+    if q3 == "No" or q4 == "面试紧张":
+        items.append({
+            "priority": "P0" if q3 == "No" else "P1",
+            "module": "模拟面试 - 温和模式 或 暖心模式 (选项4)",
+            "reason": "没面过就先练。温和模式帮你适应面试节奏，暖心模式给你信心和具体反馈。",
+        })
+
+    if q4 == "项目不够好":
+        items.append({
+            "priority": "P0",
+            "module": "项目真实性检测 (选项10) + 成长路线 (选项5)",
+            "reason": "你的项目可能缺两个核心东西：真实用户和数据闭环。先用项目检测找问题，再用成长路线补课。",
+        })
+
+    # Always recommend
+    items.append({
+        "priority": "P2",
+        "module": "互联网人格画像 (选项9)",
+        "reason": "做完上述步骤后，用人格画像了解你的九维能力雷达图，知道哪里还需要补。",
+    })
+
+    lines = [
+        "# 🧭 求职迷茫诊断报告",
+        "",
+        "根据你的回答，以下是现阶段优先级最高的行动清单：",
+        "",
+        "| 优先级 | 建议使用的功能 | 原因 |",
+        "|--------|---------------|------|",
+    ]
+    for item in sorted(items, key=lambda x: {"P0": 0, "P1": 1, "P2": 2}[x["priority"]]):
+        emoji = {"P0": "🔴", "P1": "🟡", "P2": "🟢"}[item["priority"]]
+        lines.append(f"| {emoji} {item['priority']} | {item['module']} | {item['reason']} |")
+
+    lines.extend([
+        "",
+        "> 按从上到下的顺序使用这些功能。每个功能的结果会自动保存到你的成长档案中。",
+        "",
+        "### 💡 下一步",
+        "在 CLI 菜单输入对应的数字，或切换到对应的页面标签。",
+        "",
+    ])
+    return {"markdown": "\n".join(lines)}
 
 
 # ═══════════════════════════════════════════════════════════

@@ -7,7 +7,7 @@ interview answers, content experience, and AI projects.
 Outputs JSON radar data + a brutal P8-level critique of the persona.
 """
 
-from utils import callLlm
+from utils import callLlm, safeCallLlm
 
 SYSTEM_PROMPT = """你是字节跳动的 P8 产品负责人。你的核心能力是看人。
 
@@ -182,7 +182,7 @@ def generate_persona(
 - overall_critique 必须犀利直接
 - 禁止鸡汤、禁止鼓励"""
 
-    result = callLlm(prompt, SYSTEM_PROMPT, output_format="json")
+    result = safeCallLlm(prompt, SYSTEM_PROMPT, output_format="json")
 
     if isinstance(result, dict) and "_trait" not in result:
         result["radar_data"] = _build_radar_data(result)

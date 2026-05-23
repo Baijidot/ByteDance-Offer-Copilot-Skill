@@ -7,7 +7,7 @@ v2 模块:
 - jd_analyzer: JD 拆解（文件/URL/文本）
 - offer_predictor: Offer 7 维概率预测
 - resume_rewriter: 简历互联网化重构
-- mock_interviewer: 温和/高压/地狱 模拟面试 + AI 压力值系统
+- mock_interviewer: 温和/高压/地狱/暖心 模拟面试 + AI 压力值系统
 - growth_advisor: AI 时代成长路线
 - interview_feedback: 真实字节面评系统
 - contradiction_engine: 矛盾检测 + 精准追问
@@ -15,6 +15,7 @@ v2 模块:
 - growth_tracker: 用户成长追踪
 - internet_persona: 互联网人格画像 + 九维雷达图
 - project_authenticity: 项目真实性检测
+- career_matcher: 岗位匹配度分析
 """
 
 from modules.jd_analyzer import analyze as analyze_jd
@@ -28,11 +29,13 @@ from modules.growth_advisor import generate_plan
 from modules.interview_feedback import generate_feedback
 from modules.contradiction_engine import detect_contradiction, generate_precision_followup
 from modules.corporate_bs_detector import detect as detect_bs, rewrite as rewrite_bs, translate as translate_bs
-from modules.growth_tracker import record_session, get_growth_report, resolve_problem, add_milestone
+from modules.growth_tracker import record_session, get_growth_report, resolve_problem, add_milestone, save_interview_session, load_interview_session, list_interview_sessions
 from modules.internet_persona import generate_persona
 from modules.project_authenticity import detect_authenticity
+from modules.career_matcher import match_career
+from modules.group_interview import start_group_interview, group_respond, group_evaluate
 
-__version__ = "2.1.0"
+__version__ = "2.2.0"
 __all__ = [
     # Core (v1)
     "analyze_jd",
@@ -60,4 +63,11 @@ __all__ = [
     "translate_bs",
     "generate_persona",
     "detect_authenticity",
+    "match_career",
+    "save_interview_session",
+    "load_interview_session",
+    "list_interview_sessions",
+    "start_group_interview",
+    "group_respond",
+    "group_evaluate",
 ]

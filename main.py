@@ -33,9 +33,11 @@ from modules import (
     generate_feedback, detect_contradiction, detect_bs, rewrite_bs, translate_bs,
     record_session, get_growth_report, resolve_problem, add_milestone,
     calculate_pressure, get_pressure_display,
-    generate_persona, detect_authenticity,
+    generate_persona, detect_authenticity, match_career,
+    start_group_interview, group_respond, group_evaluate,
 )
 from modules.self_review import get_self_review
+from utils import buildConfusionDiagnosis, loadGrowthData
 
 
 # ═══════════════════════════════════════════════════
@@ -129,22 +131,55 @@ def run_cli():
 
     user_id = Prompt.ask("用户 ID（用于成长追踪）", default="user_001")
 
+    # Check for --resume flag
+    if "--resume" in sys.argv:
+        idx = sys.argv.index("--resume")
+        session_id = sys.argv[idx + 1] if idx + 1 < len(sys.argv) else None
+        if session_id:
+            from modules.growth_tracker import load_interview_session
+            session = load_interview_session(session_id)
+            if "error" in session:
+                console.print(f"[red]{session['error']}[/red]")
+            else:
+                _cli_resume_interview(console, user_id, session)
+            return
+
+    # First-time guide
+    storage = loadGrowthData()
+    if not storage.get("sessions"):
+        console.print(Panel(
+            "[bold]🎯 欢迎来到 ByteDance Offer Copilot！[/bold]\n\n"
+            "这是一个 AI 互联网职业教练，不是简历美化工具。\n\n"
+            "[bold]快速上手：[/bold]\n"
+            "1. 先做「🧭 迷茫诊断」(选项12) — 了解你该从哪里开始\n"
+            "2. 再做「🔍 JD拆解」(选项1) — 看看岗位真正要什么\n"
+            "3. 上传简历做「📊 Offer预测」(选项2) — 看看你现在几成把握\n"
+            "4. 用「🔥 简历重构」(选项3) — 把学生腔改成字节味\n"
+            "5. 做一次「🎤 模拟面试」(选项4) — 面试能力只能靠练\n\n"
+            "[dim]提示: 你的所有数据会保存在成长档案中，输入 0 退出。[/dim]",
+            title="欢迎",
+            border_style="cyan",
+        ))
+
     while True:
         console.print("\n[bold]⚡ v2 功能菜单：[/bold]")
         console.print("  1. 🔍 JD 深度拆解（支持文件/URL/文本）")
         console.print("  2. 📊 Offer 概率预测")
         console.print("  3. 🔥 简历重构 + 黑话检测")
-        console.print("  4. 🎤 模拟面试（温和/高压/地狱 + 压力值）")
+        console.print("  4. 🎤 模拟面试（温和/高压/地狱/暖心 + 压力值）")
         console.print("  5. 🗺️ 成长路线")
         console.print("  6. 🫧 黑话检测 + 翻译")
         console.print("  7. 📋 生成面评报告")
         console.print("  8. 📈 查看成长轨迹")
         console.print("  9. 🧬 互联网人格画像")
         console.print("  10. 🔍 项目真实性检测")
-        console.print("  11. 🚀 一键全流程 v2.1")
+        console.print("  11. 🚀 一键全流程")
+        console.print("  12. 🧭 求职迷茫诊断")
+        console.print("  13. 🎯 岗位匹配度分析")
+        console.print("  14. 👥 群面模拟")
         console.print("  0. 退出")
 
-        choice = Prompt.ask("选项", choices=[str(i) for i in range(12)])
+        choice = Prompt.ask("选项", choices=[str(i) for i in range(15)])
 
         if choice == "0":
             console.print("[dim]记住：项目质量 > 学校名气。去做作品。[/dim]")
@@ -171,6 +206,12 @@ def run_cli():
             _cli_authenticity(console)
         elif choice == "11":
             _cli_full(console, user_id)
+        elif choice == "12":
+            _cli_confusion_diagnosis(console, user_id)
+        elif choice == "13":
+            _cli_career_match(console, user_id)
+        elif choice == "14":
+            _cli_group_interview(console, user_id)
 
 
 def _cli_jd(console, user_id):
@@ -211,10 +252,20 @@ def _cli_rewrite(console, user_id):
     record_session(user_id, "resume_rewrite", result)
     _print_markdown(console, result)
 
+    # Export option
+    export_choice = Prompt.ask("导出简历？", choices=["pdf", "docx", "n"], default="n")
+    if export_choice != "n":
+        try:
+            from components.export import export_resume
+            path = export_resume(result.get("rewritten", text), format=export_choice)
+            console.print(f"[green]已导出到: {path}[/green]")
+        except Exception as e:
+            console.print(f"[yellow]导出失败: {e}[/yellow]")
+
 
 def _cli_interview(console, user_id):
     console.print("\n[bold cyan]🎤 模拟面试[/bold cyan]\n")
-    mode = Prompt.ask("面试模式", choices=["温和", "高压", "地狱"], default="地狱")
+    mode = Prompt.ask("面试模式", choices=["温和", "高压", "地狱", "暖心"], default="地狱")
     role = Prompt.ask("目标岗位", default="产品经理")
 
     result = start_interview(mode=mode, target_role=role)
@@ -260,6 +311,16 @@ def _cli_interview(console, user_id):
         eval_result = evaluate(history, mode, role)
         record_session(user_id, "interview", eval_result)
         _print_markdown(console, eval_result)
+
+        # Save session for persistence
+        try:
+            from modules.growth_tracker import save_interview_session
+            import uuid
+            sid = str(uuid.uuid4())[:8]
+            save_interview_session(user_id, sid, history, [], eval_result, mode, role)
+            console.print(f"[dim]面试已保存 (session: {sid})[/dim]")
+        except Exception:
+            pass
 
         # Generate feedback
         if Prompt.ask("生成正式面评？", choices=["y", "n"], default="y") == "y":
@@ -389,6 +450,122 @@ def _cli_full(console, user_id):
             console.print(f"  {key}")
             console.print(f"{'='*60}")
             _print_markdown(console, results[key])
+
+
+def _cli_confusion_diagnosis(console, user_id):
+    """🧭 求职迷茫诊断 — 4题问答 → 优先级清单"""
+    console.print("\n[bold cyan]🧭 求职迷茫诊断[/bold cyan]")
+    console.print("[dim]我会问你几个问题，帮你找到现阶段最该做的事。[/dim]\n")
+
+    q1 = Prompt.ask("Q1: 你有明确的求职方向吗？", choices=["Yes", "No"], default="No")
+    q2 = Prompt.ask("Q2: 你写过让自己满意的简历吗？", choices=["Yes", "No"], default="No")
+    q3 = Prompt.ask("Q3: 你经历过技术/产品面试吗？", choices=["Yes", "No"], default="No")
+    q4 = Prompt.ask("Q4: 你目前最大的短板是什么？",
+                    choices=["岗位不了解", "简历不会写", "面试紧张", "项目不够好"],
+                    default="岗位不了解")
+
+    console.print("\n[bold green]=== 你的求职诊断结果 ===[/bold green]\n")
+    result = buildConfusionDiagnosis([q1, q2, q3, q4])
+    record_session(user_id, "confusion_diagnosis", result)
+    _print_markdown(console, result)
+
+
+def _cli_career_match(console, user_id):
+    """🎯 岗位匹配度分析"""
+    console.print("\n[bold cyan]🎯 岗位匹配度分析[/bold cyan]")
+    console.print("[dim]描述你的背景，系统推荐最适合的3个岗位方向。[/dim]\n")
+    profile = _read_input(console, "你的背景（技能/项目/兴趣/学校/专业）")
+    if not profile:
+        return
+    console.print("[dim]正在匹配 6 个岗位方向...[/dim]\n")
+    result = match_career(profile)
+    record_session(user_id, "career_match", result)
+    _print_markdown(console, result)
+
+
+def _cli_group_interview(console, user_id):
+    """👥 群面模拟 — 无领导小组讨论"""
+    console.print("\n[bold cyan]👥 群面模拟 — 无领导小组讨论[/bold cyan]")
+    console.print("[dim]你扮演一个角色，AI 扮演 2-3 个其他角色。5 轮讨论后给出分析。[/dim]\n")
+
+    role = Prompt.ask("你的角色", default="产品经理")
+    console.print("[dim]其他角色（逗号分隔，最多3个）[/dim]")
+    others_input = Prompt.ask("其他角色", default="后端开发, 运营, 设计")
+    other_roles = [r.strip() for r in others_input.split(",") if r.strip()][:3]
+    topic = Prompt.ask("讨论主题", default="如何提升一款社交App的次日留存")
+
+    console.print(f"\n[dim]你的角色: {role} | AI角色: {', '.join(other_roles)} | 主题: {topic}[/dim]\n")
+
+    session = start_group_interview(role, other_roles, topic)
+    opening = session.get("opening", f"讨论主题：{topic}\n参与者：{role}, {', '.join(other_roles)}\n请{role}先发表观点。")
+    console.print(f"[bold yellow]=== 开场 ===[/bold yellow]")
+    _print_markdown(console, {"markdown": opening})
+
+    round_num = 0
+    while round_num < session.get("max_rounds", 5):
+        round_num += 1
+        answer = Prompt.ask(f"\n[bold green]第{round_num}轮 — 你的发言[/bold green]")
+        if answer.lower() in ("quit", "exit", "退出"):
+            break
+
+        console.print("[dim]其他角色思考中...[/dim]")
+        resp = group_respond(session, answer)
+
+        for r in resp.get("responses", []):
+            console.print(f"\n[bold cyan]{r['role']}：[/bold cyan]{r['content']}")
+
+        console.print(f"[dim]--- {resp.get('round_summary', '')} ---[/dim]")
+
+        if resp.get("is_complete"):
+            break
+
+    # Evaluate
+    if Prompt.ask("\n查看群面分析？", choices=["y", "n"], default="y") == "y":
+        console.print("[dim]正在分析群面表现...[/dim]")
+        eval_result = group_evaluate(session)
+        record_session(user_id, "group_interview", eval_result)
+        _print_markdown(console, eval_result)
+
+
+def _cli_resume_interview(console, user_id, session: dict):
+    """Resume a saved interview session."""
+    console.print(f"\n[bold cyan]🔄 恢复面试[/bold cyan]")
+    console.print(f"[dim]模式: {session.get('mode')} | 岗位: {session.get('target_role')} | 已进行 {len([m for m in session.get('chat_history', []) if m.get('role') == 'candidate'])} 轮[/dim]\n")
+
+    history = session.get("chat_history", [])
+    mode = session.get("mode", "高压")
+    role = session.get("target_role", "产品经理")
+
+    # Print last few messages for context
+    for msg in history[-4:]:
+        prefix = "面试官" if msg["role"] == "interviewer" else "你"
+        console.print(f"[bold]{prefix}：[/bold]{msg['content']}\n")
+
+    pressure = 50
+    while True:
+        answer = Prompt.ask("[bold green]你[/bold green]")
+        if answer.lower() in ("quit", "exit", "退出", "结束面试"):
+            break
+
+        history.append({"role": "candidate", "content": answer})
+        resp = respond(user_answer=answer, mode=mode, target_role=role, chat_history=history)
+        msg = resp.get("interviewer_message", "") if isinstance(resp, dict) else str(resp)
+        console.print(f"\n[bold red]面试官：[/bold red]{msg}\n")
+        history.append({"role": "interviewer", "content": msg})
+
+        if resp.get("is_complete") if isinstance(resp, dict) else False:
+            break
+
+    if Prompt.ask("查看评估？", choices=["y", "n"], default="y") == "y":
+        eval_result = evaluate(history, mode, role)
+        _print_markdown(console, eval_result)
+        # Update saved session
+        try:
+            from modules.growth_tracker import save_interview_session
+            save_interview_session(user_id, session["session_id"], history, [], eval_result, mode, role)
+            console.print(f"[dim]面试已更新[/dim]")
+        except Exception:
+            pass
 
 
 # ═══════════════════════════════════════════════════
@@ -538,6 +715,48 @@ def _print_v2_summary():
 # Web UI
 # ═══════════════════════════════════════════════════
 
+def _print_stats():
+    """Print LLM performance statistics."""
+    import os, json
+    log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs", "performance.jsonl")
+    if not os.path.exists(log_path):
+        print("No performance data yet. Run at least one LLM call first.")
+        return
+
+    total = total_time = successes = failures = 0
+    times = []
+    with open(log_path, "r", encoding="utf-8") as f:
+        for line in f:
+            if not line.strip():
+                continue
+            entry = json.loads(line)
+            total += 1
+            if entry.get("success"):
+                successes += 1
+                total_time += entry.get("response_time_ms", 0)
+                times.append(entry["response_time_ms"])
+            else:
+                failures += 1
+
+    if not times:
+        print(f"Total calls: {total}, Success: {successes}, Failures: {failures}")
+        return
+
+    avg = total_time / len(times)
+    sorted_times = sorted(times)
+    p50 = sorted_times[len(sorted_times) // 2]
+    p90 = sorted_times[min(int(len(sorted_times) * 0.9), len(sorted_times) - 1)]
+    p99 = sorted_times[min(int(len(sorted_times) * 0.99), len(sorted_times) - 1)]
+
+    print(f"""
+LLM Performance Stats
+━━━━━━━━━━━━━━━━━━━━━━━
+Total calls: {total}
+Success: {successes}  Failures: {failures}
+Avg: {avg:.0f}ms  P50: {p50:.0f}ms  P90: {p90:.0f}ms  P99: {p99:.0f}ms
+Min: {sorted_times[0]:.0f}ms  Max: {sorted_times[-1]:.0f}ms
+""")
+
 def run_web():
     try:
         from components.ui import app
@@ -569,6 +788,8 @@ def main():
         _cli_growth_report(Console(), "default_user")
     elif cmd == "review":
         _print_v2_review()
+    elif cmd == "stats":
+        _print_stats()
     elif cmd == "summary":
         _print_v2_summary()
     else:

@@ -1,13 +1,13 @@
-# ByteDance Offer Copilot v2.1
+# ByteDance Offer Copilot v2.2
 
 <p align="center">
   <b>AI 互联网职业教练 — 专治学生空话和简历注水</b>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.1.0-blue" />
+  <img src="https://img.shields.io/badge/version-2.2.0-blue" />
   <img src="https://img.shields.io/badge/python-3.9+-green" />
-  <img src="https://img.shields.io/badge/modules-12-orange" />
+  <img src="https://img.shields.io/badge/modules-14-orange" />
   <img src="https://img.shields.io/badge/license-MIT-lightgrey" />
 </p>
 
@@ -21,16 +21,19 @@
 |------|------|------|------|
 | 🔍 JD 拆解 | 岗位潜台词解读 + 理想候选人画像 + 30天路线 | JD文本/URL/文件 | 结构化分析 + Markdown |
 | 📊 Offer 预测 | 7 维评分 + 综合概率 + 差距分析 | 简历 + JD | 评分卡 + 具体建议 |
-| 🔥 简历重构 | 学生腔 → 互联网表达 | 项目描述/自我介绍 | 改写版 + 改动清单 |
+| 🔥 简历重构 | 学生腔 → 互联网表达 + PDF/Word导出 | 项目描述/自我介绍 | 改写版 + 改动清单 |
 | 🫧 黑话检测 | 弱动词/空话/模糊量化词识别 | 任意文本 | 空话指数 + 逐项解释 |
 | 🌐 黑话翻译 | 学生空话 → 互联网表达 | 任意文本 | 逐句翻译 + 笔记 |
-| 🎤 模拟面试 | 温和/高压/地狱三模式 | 岗位 + JD | 追问 + 压力值 + 评估 |
+| 🎤 模拟面试 | 温和/高压/地狱/暖心四模式 | 岗位 + JD | 追问 + 压力值 + 评估 |
 | 📋 面评报告 | 真实字节面评格式 | 面试对话记录 | 优势/风险/结论/行动项 |
 | ⚡ 矛盾检测 | 跨轮次逻辑矛盾识别 | 历史对话 + 最新回答 | 矛盾标记 + 精准追问 |
 | 🔥 AI 压力值 | 基于回答质量的动态压力计算 | 面试回答 + 历史 | 0-100 压力值 + 变化原因 |
 | 🧬 人格画像 | 九维互联网能力雷达 | 简历 + 项目 + 内容经历 | 雷达数据 + 强弱项分析 |
 | 🔍 真实性检测 | 学生Demo vs 真实产品 | 项目描述 | 6维度评分 + 学生味信号 |
-| 📈 成长追踪 | 历史记录 + 成长曲线 | 使用数据 | 趋势图 + 评分 |
+| 📈 成长追踪 | 历史记录 + 成长曲线 + 面试持久化 | 使用数据 | 趋势图 + 评分 |
+| 🧭 迷茫诊断 | 4题定位当前阶段 → 优先级推荐 | 4道选择题 | 诊断报告 + 行动清单 |
+| 🎯 岗位匹配 | 背景 → TOP 3 岗位方向 + 差距清单 | 技能/项目/学校/专业 | 匹配分 + 具体差距 |
+| 👥 群面模拟 | 无领导小组讨论，AI 多角色扮演 | 角色 + 主题 | 5轮讨论 + 发言/观点/协作分析 |
 
 ## 快速开始
 
@@ -68,8 +71,9 @@ print(session["opening"])
 
 ```bash
 python main.py cli
-# 12 个菜单选项：JD拆解 / Offer预测 / 简历重构+黑话 / 模拟面试+压力值 /
-# 成长路线 / 黑话检测+翻译 / 面评报告 / 成长轨迹 / 人格画像 / 项目真实性 / 一键全流程
+# 14 个菜单选项：JD拆解 / Offer预测 / 简历重构+黑话 / 模拟面试+压力值 /
+# 成长路线 / 黑话检测+翻译 / 面评报告 / 成长轨迹 / 人格画像 / 项目真实性 /
+# 一键全流程 / 迷茫诊断 / 岗位匹配 / 群面模拟
 ```
 
 ## 项目结构
@@ -83,21 +87,40 @@ ByteDance-Offer-Copilot-Skill/
 │   ├── jd_analyzer.py                # JD 深度拆解
 │   ├── offer_predictor.py            # Offer 7维概率预测
 │   ├── resume_rewriter.py            # 简历互联网化重构
-│   ├── mock_interviewer.py           # 模拟面试 + AI 压力值
+│   ├── mock_interviewer.py           # 模拟面试 + AI 压力值 + 暖心模式
 │   ├── interview_feedback.py         # 字节格式面评
 │   ├── contradiction_engine.py       # 矛盾检测 + 精准追问
 │   ├── corporate_bs_detector.py      # 黑话检测 + 黑话翻译
 │   ├── growth_advisor.py             # AI 时代成长路线
-│   ├── growth_tracker.py             # 用户成长追踪
+│   ├── growth_tracker.py             # 用户成长追踪 + 面试持久化
 │   ├── internet_persona.py           # 互联网人格画像
 │   ├── project_authenticity.py       # 项目真实性检测
+│   ├── career_matcher.py             # 岗位匹配度分析 (v2.2)
+│   ├── group_interview.py            # 群面模拟 (v2.2)
 │   └── self_review.py                # 残酷自评
 ├── components/
-│   ├── ui.py                         # FastAPI Web 界面
-│   └── styles.py                     # 暗色 CSS 主题
+│   ├── ui.py                         # FastAPI Web 界面 (21 routes)
+│   ├── styles.py                     # 暗色 CSS 主题 + 移动端适配
+│   └── export.py                     # 简历 PDF/Word 导出 (v2.2)
 ├── requirements.txt
 └── pyproject.toml
 ```
+
+## v2.2 新增 (2026-05)
+
+| 特性 | 说明 |
+|------|------|
+| 🧭 迷茫诊断 | 4题定位求职阶段，规则引擎推荐行动优先级 |
+| 🎯 岗位匹配 | 6个内置岗位模板，LLM 匹配 TOP 3 + 差距清单 |
+| ❤️ 暖心导师模式 | 面试第4模式 — 鼓励式提问，每3轮注入正向反馈 |
+| 👥 群面模拟 | 无领导小组讨论，AI 多角色扮演，5轮讨论 + 分析 |
+| 📄 简历导出 | PDF (reportlab) / Word (python-docx) 一键导出 |
+| 💾 面试持久化 | 面试保存/恢复，`--resume session_id` 继续 |
+| 📊 性能统计 | `python main.py stats` — P50/P90/P99 |
+| 📱 移动端适配 | 768px/480px 双断点响应式 CSS |
+| 🎓 新手引导 | localStorage 模态框 + CLI 首次欢迎面板 |
+| 🛡️ 全局错误处理 | `safeCallLlm()` 包装所有 LLM 调用，优雅降级 |
+| 💬 长对话管理 | 30 轮自动摘要压缩，防止上下文溢出 |
 
 ## 架构设计
 

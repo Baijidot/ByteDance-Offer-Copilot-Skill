@@ -10,7 +10,7 @@ This engine:
 3. Generates precise follow-up questions that cite the contradiction
 """
 
-from utils import callLlm
+from utils import callLlm, safeCallLlm
 from typing import Optional
 
 
@@ -107,7 +107,7 @@ def detect_contradiction(
 - 追问必须具体、有压迫感、引用原话
 - 语气匹配面试模式：温和=好奇追问，高压=质疑追问，地狱=压迫追问"""
 
-    result = callLlm(prompt, SYSTEM_PROMPT, output_format="json")
+    result = safeCallLlm(prompt, SYSTEM_PROMPT, output_format="json")
     return result
 
 

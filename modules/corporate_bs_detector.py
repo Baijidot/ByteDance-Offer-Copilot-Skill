@@ -7,7 +7,7 @@ Then rewrites them into real internet-industry professional expression.
 This is the viral feature — it's satisfying to see your BS get called out.
 """
 
-from utils import callLlm
+from utils import callLlm, safeCallLlm
 import re
 
 SYSTEM_PROMPT = """你是互联网表达专家。你的核心能力是识别「学生空话」并将其转化为「互联网化表达」。
@@ -171,7 +171,7 @@ def rewrite(text: str, target_role: str = "产品经理") -> dict:
 }}
 ```"""
 
-    result = callLlm(prompt, SYSTEM_PROMPT, output_format="json")
+    result = safeCallLlm(prompt, SYSTEM_PROMPT, output_format="json")
 
     if isinstance(result, dict) and "_trait" not in result:
         result["original"] = text
@@ -345,7 +345,7 @@ def translate(text: str, mode: str = "harsh") -> dict:
 - 具体化模糊表达
 - 强动词替换弱动词"""
 
-        llm_result = callLlm(prompt, TRANSLATE_SYSTEM_PROMPT, output_format="json")
+        llm_result = safeCallLlm(prompt, TRANSLATE_SYSTEM_PROMPT, output_format="json")
         full = llm_result.get("full_translation", "") if isinstance(llm_result, dict) else ""
     else:
         full = ""
