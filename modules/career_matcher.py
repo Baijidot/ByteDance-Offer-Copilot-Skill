@@ -3,9 +3,12 @@ Career Matcher — 岗位匹配度分析。
 
 Takes student background description and matches to top 3 job directions.
 Uses 6 built-in role templates if no JD list provided.
+Auto-loads cached campus jobs from campus_jobs.json if available.
 """
 
 import json
+import os
+from typing import Optional
 from utils import callLlm, safeCallLlm
 
 SYSTEM_PROMPT = """你是字节跳动的校招岗位匹配专家。
@@ -65,6 +68,75 @@ BUILT_IN_ROLES = [
 ]
 
 
+def _load_cached_jobs() -> Optional[list]:
+    """
+    Load cached campus jobs from campus_jobs.json.
+    Auto-detects the file in the skill root directory.
+    Trae Solo "More Than Coding" can populate this file by crawling the ByteDance campus page.
+
+    Supported formats:
+    - [{"title": "...", "requirements": "..."}, ...]
+    - [{"name": "...", "jd": "...", "department": "..."}, ...]
+    - Raw ByteDance API: [{"jobTitle": "...", "jobDescription": "...", ...}, ...]
+
+    Returns None if no cache file found, so caller falls back to built-in templates.
+    """
+    cache_paths = [
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "campus_jobs.json"),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "campus_jobs.json"),
+    ]
+
+    for cache_path in cache_paths:
+        if os.path.exists(cache_path):
+            try:
+                with open(cache_path, "r", encoding="utf-8") as f:
+                    raw = json.load(f)
+
+                if not isinstance(raw, list):
+                    return None
+
+                # Normalize to [{"title": str, "requirements": str}] format
+                normalized = []
+                for item in raw:
+                    title = (
+                        item.get("title")
+                        or item.get("name")
+                        or item.get("jobTitle")
+                        or item.get("job_title")
+                        or item.get("positionName")
+                        or ""
+                    )
+                    requirements = (
+                        item.get("requirements")
+                        or item.get("jd")
+                        or item.get("jobDescription")
+                        or item.get("job_description")
+                        or item.get("description")
+                        or ""
+                    )
+
+                    if not title:
+                        continue
+
+                    # Build rich requirements from available fields
+                    extra = []
+                    for k in ("department", "location", "education", "salary"):
+                        if item.get(k):
+                            extra.append(f"{k}: {item[k]}")
+                    if extra:
+                        requirements = requirements + "\n" + "\n".join(extra) if requirements else "\n".join(extra)
+
+                    normalized.append({"title": title, "requirements": requirements})
+
+                if normalized:
+                    return normalized
+
+            except (json.JSONDecodeError, IOError):
+                return None
+
+    return None
+
+
 def match_career(student_profile: str, available_jd_list: list = None) -> dict:
     """
     匹配学生背景到最适合的岗位方向。
@@ -72,7 +144,7 @@ def match_career(student_profile: str, available_jd_list: list = None) -> dict:
     Args:
         student_profile: 学生背景描述（技能/项目/兴趣/学校/专业等）
         available_jd_list: 可选的真实JD列表 [{"title": str, "requirements": str}, ...]
-                           如果为None，使用内置6个岗位模板
+                           如果为None，自动尝试加载 campus_jobs.json，没有则用内置6个模板
 
     Returns:
         {
@@ -81,6 +153,8 @@ def match_career(student_profile: str, available_jd_list: list = None) -> dict:
             "markdown": str
         }
     """
+    if available_jd_list is None:
+        available_jd_list = _load_cached_jobs()
     roles = available_jd_list if available_jd_list else BUILT_IN_ROLES
 
     prompt = f"""请基于以下学生背景，匹配最适合的岗位方向。

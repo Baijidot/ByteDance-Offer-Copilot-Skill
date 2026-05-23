@@ -95,7 +95,7 @@ ByteDance-Offer-Copilot-Skill/
 │   ├── growth_tracker.py             # 用户成长追踪 + 面试持久化
 │   ├── internet_persona.py           # 互联网人格画像
 │   ├── project_authenticity.py       # 项目真实性检测
-│   ├── career_matcher.py             # 岗位匹配度分析 (v2.2)
+│   ├── career_matcher.py             # 岗位匹配度分析 + 真实岗位缓存 (v2.2)
 │   ├── group_interview.py            # 群面模拟 (v2.2)
 │   └── self_review.py                # 残酷自评
 ├── components/

@@ -62,7 +62,7 @@ description: >-
 | 成长路线 | `from modules import generate_plan` |
 | 成长追踪 | `from modules import record_session, get_growth_report` |
 | 迷茫诊断 | `from utils import buildConfusionDiagnosis` → `buildConfusionDiagnosis(answers)` |
-| 岗位匹配 | `from modules import match_career` → `match_career(profile)` |
+| 岗位匹配 | `from modules import match_career` → `match_career(profile)`（自动加载 campus_jobs.json 缓存） |
 | 群面模拟 | `from modules import start_group_interview, group_respond, group_evaluate` |
 | 面试持久化 | `from modules import save_interview_session, load_interview_session` |
 
@@ -86,6 +86,26 @@ feedback = generate_feedback(chat_history, target_role="产品经理", mode="地
 - **高压**：连续追问 4-5 层，矛盾检测，有压迫感
 - **地狱**：追问 7 层以上，质疑一切，记住每句话找出矛盾，P8 拷打
 - **暖心**：鼓励式提问，帮助发现潜力，建设性反馈，每轮具体正向肯定
+
+### 岗位匹配 + 缓存机制
+
+岗位匹配功能支持自动加载真实校招岗位缓存：
+
+1. **首次使用**：用户说"帮我爬取字节校招岗位"
+   - 使用 Trae Solo 内置浏览器能力访问 `https://jobs.bytedance.com/campus`
+   - 提取所有校招岗位的职位名称和岗位要求
+   - 保存为 `campus_jobs.json` 放在项目根目录
+
+2. **匹配时**：`match_career()` 自动检测 `campus_jobs.json`
+   - 有缓存 → 基于真实岗位匹配，更精准
+   - 无缓存 → fallback 到内置 6 个岗位模板
+
+3. **数据格式**（任意一种均可自动识别）：
+   - `[{"jobTitle": "...", "jobDescription": "..."}, ...]`
+   - `[{"title": "...", "requirements": "..."}, ...]`
+   - `[{"name": "...", "jd": "...", "department": "..."}, ...]`
+
+4. **刷新**：用户说"更新岗位缓存"，重新爬取覆盖旧文件
 
 ### 输出原则
 

@@ -474,10 +474,25 @@ def _cli_career_match(console, user_id):
     """🎯 岗位匹配度分析"""
     console.print("\n[bold cyan]🎯 岗位匹配度分析[/bold cyan]")
     console.print("[dim]描述你的背景，系统推荐最适合的3个岗位方向。[/dim]\n")
+
+    # Check cache status
+    import os
+    cache_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "campus_jobs.json")
+    if os.path.exists(cache_path):
+        try:
+            import json
+            with open(cache_path, "r", encoding="utf-8") as f:
+                count = len(json.load(f))
+            console.print(f"[dim]📋 已加载 {count} 个真实校招岗位（来自 campus_jobs.json）[/dim]\n")
+        except Exception:
+            console.print("[dim]📋 使用内置6个岗位模板[/dim]\n")
+    else:
+        console.print("[dim]📋 使用内置6个岗位模板（运行 python main.py fetch-jobs 查看如何爬取真实岗位）[/dim]\n")
+
     profile = _read_input(console, "你的背景（技能/项目/兴趣/学校/专业）")
     if not profile:
         return
-    console.print("[dim]正在匹配 6 个岗位方向...[/dim]\n")
+    console.print("[dim]正在匹配...[/dim]\n")
     result = match_career(profile)
     record_session(user_id, "career_match", result)
     _print_markdown(console, result)
@@ -715,6 +730,42 @@ def _print_v2_summary():
 # Web UI
 # ═══════════════════════════════════════════════════
 
+def _print_fetch_jobs_guide():
+    """Print guide for crawling ByteDance campus jobs via Trae Solo."""
+    import os
+    cache_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "campus_jobs.json")
+    has_cache = os.path.exists(cache_path)
+
+    print(f"""
+  ByteDance Campus Jobs — 岗位缓存
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  缓存状态: {'已缓存' if has_cache else '未缓存'}  {cache_path}
+
+  Trae Solo "More Than Coding" 爬取指南:
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  1. 打开 Trae Solo 对话框
+  2. 输入:
+     "帮我爬取 https://jobs.bytedance.com/campus 的所有校招岗位，
+      提取职位名称和岗位要求，
+      保存为 campus_jobs.json 放在项目根目录"
+
+  3. Trae Solo 会用内置浏览器能力抓取页面数据并写入文件
+  4. 爬完后岗位匹配功能自动识别真实岗位
+
+  数据格式（任意一种均可自动识别）:
+  [
+    {{"jobTitle": "...", "jobDescription": "..."}},
+    {{"title": "...", "requirements": "..."}},
+    {{"name": "...", "jd": "...", "department": "..."}}
+  ]
+
+  匹配时自动加载缓存岗位 > 没有缓存则用内置6个岗位模板
+""")
+    return
+
+
 def _print_stats():
     """Print LLM performance statistics."""
     import os, json
@@ -790,11 +841,13 @@ def main():
         _print_v2_review()
     elif cmd == "stats":
         _print_stats()
+    elif cmd == "fetch-jobs":
+        _print_fetch_jobs_guide()
     elif cmd == "summary":
         _print_v2_summary()
     else:
         print(f"未知命令: {cmd}")
-        print("可用: web / cli / full / bs / growth-report / review / summary")
+        print("可用: web / cli / full / bs / growth-report / review / stats / fetch-jobs / summary")
 
 
 if __name__ == "__main__":

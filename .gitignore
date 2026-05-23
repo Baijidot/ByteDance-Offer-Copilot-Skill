@@ -2,6 +2,9 @@ __pycache__/
 .claude/
 *.pyc
 growth_data.json
+campus_jobs.json
+user_data/
+logs/
 *.backup/
 *.zip
 CONTEST.md
