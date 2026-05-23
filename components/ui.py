@@ -32,7 +32,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="ByteDance Offer Copilot",
         description="AI时代的字节跳动校招作战室",
-        version="2.2.0",
+        version="2.3.0",
     )
 
     # ===== Routes =====

@@ -35,7 +35,7 @@ from modules.project_authenticity import detect_authenticity
 from modules.career_matcher import match_career
 from modules.group_interview import start_group_interview, group_respond, group_evaluate
 
-__version__ = "2.2.0"
+__version__ = "2.3.0"
 __all__ = [
     # Core (v1)
     "analyze_jd",

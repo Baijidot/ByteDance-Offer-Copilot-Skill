@@ -1,6 +1,6 @@
 {
   "name": "bytedance-coach",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "ByteDance校招AI职业教练 — JD拆解、Offer概率预测、简历重构、模拟面试（温和/高压/地狱/暖心）、面评报告、黑话检测、矛盾检测、人格画像、项目真实性审查、成长规划、岗位匹配度分析、求职迷茫诊断、群面模拟、面试会话持久化",
   "entry_point": "main.py",
   "entry_function": "run_skill",

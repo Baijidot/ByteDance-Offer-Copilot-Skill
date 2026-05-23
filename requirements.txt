@@ -1,4 +1,4 @@
-# ByteDance Offer Copilot v2.2 — Dependencies
+# ByteDance Offer Copilot v2.3 — Dependencies
 # Core
 rich>=13.0.0
 

@@ -9,7 +9,7 @@ description: >-
   黑话、学生空话、模拟面试、压力面、面评、群面、迷茫、岗位匹配等关键词时使用此技能。
 ---
 
-# ByteDance Offer Copilot v2.2 — AI 互联网职业教练
+# ByteDance Offer Copilot v2.3 — AI 互联网职业教练
 
 ## 描述
 

@@ -36,7 +36,6 @@ from modules import (
     generate_persona, detect_authenticity, match_career,
     start_group_interview, group_respond, group_evaluate,
 )
-from modules.self_review import get_self_review
 from utils import buildConfusionDiagnosis, loadGrowthData
 
 
@@ -629,23 +628,19 @@ def _print_markdown(console, result: dict, key: str = ""):
 
 
 # ═══════════════════════════════════════════════════
-# v2 Self-Review & Delivery Summary
+# Delivery Summary
 # ═══════════════════════════════════════════════════
-
-def _print_v2_review():
-    """Print the brutal v2 self-review."""
-    print(get_self_review())
 
 
 def _print_v2_summary():
-    """Print v2 delivery summary card."""
+    """Print v2.3 delivery summary card."""
     print(r"""
 ╔══════════════════════════════════════════════════════════╗
 ║                                                          ║
-║   🎯 ByteDance Offer Copilot v2                         ║
+║   🎯 ByteDance Offer Copilot v2.3                       ║
 ║   AI 互联网职业教练                                      ║
 ║                                                          ║
-║   从「AI 校招工具」升级为「AI 互联网职业教练」            ║
+║   Built with Trae Solo — More Than Coding               ║
 ║                                                          ║
 ╚══════════════════════════════════════════════════════════╝
 
@@ -653,43 +648,48 @@ def _print_v2_summary():
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  v2 交付清单
+  v2.3 交付清单
 
   📦 项目规模
-     12 个 Python 模块  |  4,480 行代码  |  零 Mock 数据
+     14 个 Python 模块  |  5000+ 行代码  |  零 Mock 数据
 
-  🆕 新增 4 个模块
-     📋 modules/interview_feedback.py    面评系统
-     ⚡ modules/contradiction_engine.py  矛盾检测引擎
-     🫧 modules/corporate_bs_detector.py 黑话检测器
-     📈 modules/growth_tracker.py        成长追踪系统
+  🆕 v2.2 → v2.3 新增
+     🧭 求职迷茫诊断          4题定位 → 优先级推荐
+     🎯 岗位匹配度分析        6内置模板 + campus_jobs.json 真实岗位缓存
+     ❤️ 暖心导师模式          面试第4模式，鼓励式提问
+     👥 群面模拟              无领导小组讨论，AI多角色扮演
+     📄 简历导出              PDF (reportlab) + Word (python-docx)
+     💾 面试持久化            保存/恢复/继续面试
+     📊 性能统计              P50/P90/P99 LLM调用分析
+     📱 移动端适配            768px + 480px 双断点
+     🎓 新手引导              localStorage 模态框 + CLI欢迎面板
+     🛡️ 全局错误处理          safeCallLlm + _trait空壳拦截
+     💬 长对话管理            30轮自动摘要压缩
+     🔄 岗位缓存              Trae Solo内置浏览器爬取字节校招
 
-  🔧 升级 5 个模块
-     🔍 modules/jd_analyzer.py          支持文件/URL/文本三种输入
-     📊 modules/offer_predictor.py      更犀利的评价语言
-     🔥 modules/resume_rewriter.py      集成黑话检测
-     🎤 modules/mock_interviewer.py     地狱模式 + 矛盾检测
-     🗺️ modules/growth_advisor.py       集成成长追踪
-     🧠 utils.py                       全新 P8 面试官人格 Prompt
-
-  🎯 核心能力
+  🎯 核心能力（完整14模块）
      ✅ JD 拆解（文件/URL/文本）
      ✅ Offer 7 维概率预测
-     ✅ 简历互联网化重构
-     ✅ 温和 / 高压 / 地狱 三模式面试
-     ✅ 真实字节面评格式
+     ✅ 简历互联网化重构 + 导出
+     ✅ 温和 / 高压 / 地狱 / 暖心 四模式面试
+     ✅ AI 压力值动态计算
      ✅ 矛盾检测 + 精准追问
-     ✅ 学生空话即时检测
-     ✅ Offer 概率变化曲线
-     ✅ 用户成长追踪
+     ✅ 学生空话即时检测 + 翻译
+     ✅ 真实字节面评格式
+     ✅ 互联网人格画像（九维雷达）
+     ✅ 项目真实性检测（学生Demo vs 真实产品）
+     ✅ 求职迷茫诊断
+     ✅ 岗位匹配度分析 + 真实岗位缓存
+     ✅ 群面模拟（无领导小组讨论）
+     ✅ 用户成长追踪 + 面试持久化
 
   🚀 运行方式
-     python main.py cli      交互式 CLI
-     python main.py web      Web UI (localhost:8000)
-     python main.py full     一键全流程
-     python main.py bs       黑话检测
-     python main.py review   残酷自评
-     python main.py summary  本页面
+     python main.py cli          交互式 CLI（14个菜单选项）
+     python main.py web          Web UI (localhost:8000, 23 endpoints)
+     python main.py fetch-jobs   岗位缓存指南
+     python main.py stats        LLM 性能统计
+     python main.py bs           黑话检测
+     python main.py summary      本页面
 
   💡 设计原则
      1. Prompt 是产品核心，不是代码
@@ -697,116 +697,15 @@ def _print_v2_summary():
      3. JSON + Markdown 双输出
      4. 规则引擎 + LLM 双层架构
      5. 模块化纯函数，任何平台可嵌入
+     6. Trae Solo 原生 Skill，关键词触发即用
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  ⚠️ 已知局限（来自自评）
-
-     综合评分：6.5/10  有条件通过
-
-     最致命的问题：没有数据闭环
-     → 你不知道用户用完之后 Offer 概率有没有真的提升
-
-     面试追问深度靠 prompt 而非技术
-     → 超过 30 轮对话，上下文窗口溢出，矛盾检测会崩
-
-     黑话检测规则硬编码
-     → 无法自进化，新的空话模式检测不到
-
-     差异化护城河弱
-     → 任何会用 Trae Solo 的产品经理一个周末可复刻 80%
-
-     如果 v3 只做一件事：做数据闭环。
-     找 20 个真实用户，追踪投递结果。
-
-     没有数据的产品建议，
-     和自己嘴里说的「学生空话」没有本质区别。
+  🔧 开发环境
+     Trae Solo + More Than Coding
+     爬取 → 分析 → 落地，全流程在一个对话里完成
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """)
 
-
-# ═══════════════════════════════════════════════════
-# Web UI
-# ═══════════════════════════════════════════════════
-
-def _print_fetch_jobs_guide():
-    """Print guide for crawling ByteDance campus jobs via Trae Solo."""
-    import os
-    cache_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "campus_jobs.json")
-    has_cache = os.path.exists(cache_path)
-
-    print(f"""
-  ByteDance Campus Jobs — 岗位缓存
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  缓存状态: {'已缓存' if has_cache else '未缓存'}  {cache_path}
-
-  Trae Solo "More Than Coding" 爬取指南:
-  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  1. 打开 Trae Solo 对话框
-  2. 输入:
-     "帮我爬取 https://jobs.bytedance.com/campus 的所有校招岗位，
-      提取职位名称和岗位要求，
-      保存为 campus_jobs.json 放在项目根目录"
-
-  3. Trae Solo 会用内置浏览器能力抓取页面数据并写入文件
-  4. 爬完后岗位匹配功能自动识别真实岗位
-
-  数据格式（任意一种均可自动识别）:
-  [
-    {{"jobTitle": "...", "jobDescription": "..."}},
-    {{"title": "...", "requirements": "..."}},
-    {{"name": "...", "jd": "...", "department": "..."}}
-  ]
-
-  匹配时自动加载缓存岗位 > 没有缓存则用内置6个岗位模板
-""")
-    return
-
-
-def _print_stats():
-    """Print LLM performance statistics."""
-    import os, json
-    log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs", "performance.jsonl")
-    if not os.path.exists(log_path):
-        print("No performance data yet. Run at least one LLM call first.")
-        return
-
-    total = total_time = successes = failures = 0
-    times = []
-    with open(log_path, "r", encoding="utf-8") as f:
-        for line in f:
-            if not line.strip():
-                continue
-            entry = json.loads(line)
-            total += 1
-            if entry.get("success"):
-                successes += 1
-                total_time += entry.get("response_time_ms", 0)
-                times.append(entry["response_time_ms"])
-            else:
-                failures += 1
-
-    if not times:
-        print(f"Total calls: {total}, Success: {successes}, Failures: {failures}")
-        return
-
-    avg = total_time / len(times)
-    sorted_times = sorted(times)
-    p50 = sorted_times[len(sorted_times) // 2]
-    p90 = sorted_times[min(int(len(sorted_times) * 0.9), len(sorted_times) - 1)]
-    p99 = sorted_times[min(int(len(sorted_times) * 0.99), len(sorted_times) - 1)]
-
-    print(f"""
-LLM Performance Stats
-━━━━━━━━━━━━━━━━━━━━━━━
-Total calls: {total}
-Success: {successes}  Failures: {failures}
-Avg: {avg:.0f}ms  P50: {p50:.0f}ms  P90: {p90:.0f}ms  P99: {p99:.0f}ms
-Min: {sorted_times[0]:.0f}ms  Max: {sorted_times[-1]:.0f}ms
-""")
 
 def run_web():
     try:
@@ -838,7 +737,7 @@ def main():
         from rich.console import Console
         _cli_growth_report(Console(), "default_user")
     elif cmd == "review":
-        _print_v2_review()
+        _print_v2_summary()
     elif cmd == "stats":
         _print_stats()
     elif cmd == "fetch-jobs":
@@ -847,7 +746,7 @@ def main():
         _print_v2_summary()
     else:
         print(f"未知命令: {cmd}")
-        print("可用: web / cli / full / bs / growth-report / review / stats / fetch-jobs / summary")
+        print("可用: web / cli / full / bs / growth-report / summary / stats / fetch-jobs")
 
 
 if __name__ == "__main__":

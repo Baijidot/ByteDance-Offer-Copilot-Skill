@@ -1,11 +1,11 @@
-# ByteDance Offer Copilot v2.2
+# ByteDance Offer Copilot v2.3
 
 <p align="center">
   <b>AI 互联网职业教练 — 专治学生空话和简历注水</b>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.2.0-blue" />
+  <img src="https://img.shields.io/badge/version-2.3.0-blue" />
   <img src="https://img.shields.io/badge/python-3.9+-green" />
   <img src="https://img.shields.io/badge/modules-14-orange" />
   <img src="https://img.shields.io/badge/license-MIT-lightgrey" />
@@ -95,23 +95,24 @@ ByteDance-Offer-Copilot-Skill/
 │   ├── growth_tracker.py             # 用户成长追踪 + 面试持久化
 │   ├── internet_persona.py           # 互联网人格画像
 │   ├── project_authenticity.py       # 项目真实性检测
-│   ├── career_matcher.py             # 岗位匹配度分析 + 真实岗位缓存 (v2.2)
-│   ├── group_interview.py            # 群面模拟 (v2.2)
+│   ├── career_matcher.py             # 岗位匹配度分析 + 真实岗位缓存 (v2.3)
+│   ├── group_interview.py            # 群面模拟 (v2.3)
 │   └── self_review.py                # 残酷自评
 ├── components/
 │   ├── ui.py                         # FastAPI Web 界面 (21 routes)
 │   ├── styles.py                     # 暗色 CSS 主题 + 移动端适配
-│   └── export.py                     # 简历 PDF/Word 导出 (v2.2)
+│   └── export.py                     # 简历 PDF/Word 导出 (v2.3)
 ├── requirements.txt
 └── pyproject.toml
 ```
 
-## v2.2 新增 (2026-05)
+## v2.3 新增 (2026-05)
 
 | 特性 | 说明 |
 |------|------|
 | 🧭 迷茫诊断 | 4题定位求职阶段，规则引擎推荐行动优先级 |
-| 🎯 岗位匹配 | 6个内置岗位模板，LLM 匹配 TOP 3 + 差距清单 |
+| 🎯 岗位匹配 | 6个内置岗位模板 + 自动加载 campus_jobs.json 真实岗位缓存 |
+| 🔄 岗位缓存 | `python main.py fetch-jobs` — Trae Solo 爬取字节校招 + 自动识别多种 JSON 格式 |
 | ❤️ 暖心导师模式 | 面试第4模式 — 鼓励式提问，每3轮注入正向反馈 |
 | 👥 群面模拟 | 无领导小组讨论，AI 多角色扮演，5轮讨论 + 分析 |
 | 📄 简历导出 | PDF (reportlab) / Word (python-docx) 一键导出 |
@@ -119,7 +120,7 @@ ByteDance-Offer-Copilot-Skill/
 | 📊 性能统计 | `python main.py stats` — P50/P90/P99 |
 | 📱 移动端适配 | 768px/480px 双断点响应式 CSS |
 | 🎓 新手引导 | localStorage 模态框 + CLI 首次欢迎面板 |
-| 🛡️ 全局错误处理 | `safeCallLlm()` 包装所有 LLM 调用，优雅降级 |
+| 🛡️ 全局错误处理 | `safeCallLlm()` 包装所有 LLM 调用，`_trait` 空壳检测，优雅降级 |
 | 💬 长对话管理 | 30 轮自动摘要压缩，防止上下文溢出 |
 
 ## 架构设计
