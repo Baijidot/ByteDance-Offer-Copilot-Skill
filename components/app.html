@@ -1275,7 +1275,7 @@ function addOfferCard(preset) {
         sliders += '<div class="slider-row"><span>' + label + '</span><input type="range" min="1" max="10" value="' + v + '" id="oc' + offerCount + '_' + key + '"><span class="sr-val" id="oc' + offerCount + '_' + key + '_v">' + v + '</span></div>';
     }
     let salary = p.total_package;
-    if (!salary && p.salary) { const m = String(p.salary).match(/(\d+(?:\.\d)?)/); if (m) salary = m[1]; }
+    if (!salary && p.salary) { const s = String(p.salary); const m = s.match(/(\d+(?:\.\d+)?)/); if (m && s.includes('万') && !s.includes('月')) salary = m[1]; }
     card.innerHTML =
         '<button class="oc-remove" onclick="removeOfferCard(' + offerCount + ')">✕</button>' +
         '<div class="form-group"><label class="form-label">公司</label><input class="form-input" id="oc' + offerCount + '_company" value="' + escapeHtml(p.company || '') + '" placeholder="公司名"></div>' +

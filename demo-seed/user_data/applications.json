@@ -1,0 +1,285 @@
+{
+  "applications": [
+    {
+      "id": "d9eba295",
+      "user_id": "default_user",
+      "company": "字节跳动",
+      "position": "产品运营实习生",
+      "channel": "内推",
+      "salary": "",
+      "city": "上海",
+      "status": "二面",
+      "applied_at": "2026-09-10",
+      "updated_at": "2026-09-16 21:40",
+      "next_action": "准备二面：书语项目数据复盘",
+      "next_action_date": "2026-09-18",
+      "notes": "",
+      "jd_text": "",
+      "jd_id": "b80d14b2",
+      "history": [
+        {
+          "status": "已投递",
+          "at": "2026-09-16 21:40",
+          "note": "创建记录"
+        },
+        {
+          "status": "一面",
+          "at": "2026-09-16 21:40",
+          "note": ""
+        },
+        {
+          "status": "二面",
+          "at": "2026-09-16 21:40",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "id": "828fe765",
+      "user_id": "default_user",
+      "company": "腾讯",
+      "position": "用户增长运营实习生",
+      "channel": "官网",
+      "salary": "",
+      "city": "广州",
+      "status": "一面",
+      "applied_at": "2026-09-08",
+      "updated_at": "2026-09-16 21:40",
+      "next_action": "",
+      "next_action_date": "",
+      "notes": "",
+      "jd_text": "",
+      "jd_id": "c70b4f42",
+      "history": [
+        {
+          "status": "已投递",
+          "at": "2026-09-16 21:40",
+          "note": "创建记录"
+        },
+        {
+          "status": "笔试",
+          "at": "2026-09-16 21:40",
+          "note": ""
+        },
+        {
+          "status": "一面",
+          "at": "2026-09-16 21:40",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "id": "47af6ff5",
+      "user_id": "default_user",
+      "company": "淘天集团",
+      "position": "商业数据分析实习生",
+      "channel": "官网",
+      "salary": "",
+      "city": "杭州",
+      "status": "已挂",
+      "applied_at": "2026-08-20",
+      "updated_at": "2026-09-16 21:40",
+      "next_action": "",
+      "next_action_date": "",
+      "notes": "",
+      "jd_text": "",
+      "jd_id": "db6b906f",
+      "history": [
+        {
+          "status": "已投递",
+          "at": "2026-09-16 21:40",
+          "note": "创建记录"
+        },
+        {
+          "status": "已挂",
+          "at": "2026-09-16 21:40",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "id": "3503240c",
+      "user_id": "default_user",
+      "company": "美团",
+      "position": "到店业务运营实习生",
+      "channel": "BOSS直聘",
+      "salary": "",
+      "city": "上海",
+      "status": "已投递",
+      "applied_at": "2026-08-25",
+      "updated_at": "2026-08-25 00:00",
+      "next_action": "",
+      "next_action_date": "",
+      "notes": "",
+      "jd_text": "",
+      "jd_id": "",
+      "history": [
+        {
+          "status": "已投递",
+          "at": "2026-09-16 21:40",
+          "note": "创建记录"
+        }
+      ]
+    },
+    {
+      "id": "3c1dc268",
+      "user_id": "default_user",
+      "company": "小红书",
+      "position": "社区运营实习生",
+      "channel": "内推",
+      "salary": "300元/天",
+      "city": "上海",
+      "status": "Offer",
+      "applied_at": "2026-08-28",
+      "updated_at": "2026-09-16 21:40",
+      "next_action": "",
+      "next_action_date": "",
+      "notes": "",
+      "jd_text": "",
+      "jd_id": "",
+      "history": [
+        {
+          "status": "已投递",
+          "at": "2026-09-16 21:40",
+          "note": "创建记录"
+        },
+        {
+          "status": "一面",
+          "at": "2026-09-16 21:40",
+          "note": ""
+        },
+        {
+          "status": "二面",
+          "at": "2026-09-16 21:40",
+          "note": ""
+        },
+        {
+          "status": "HR面",
+          "at": "2026-09-16 21:40",
+          "note": ""
+        },
+        {
+          "status": "Offer",
+          "at": "2026-09-16 21:40",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "id": "281deb64",
+      "user_id": "default_user",
+      "company": "网易",
+      "position": "内容运营实习生",
+      "channel": "实习僧",
+      "salary": "250元/天",
+      "city": "杭州",
+      "status": "HR面",
+      "applied_at": "2026-08-30",
+      "updated_at": "2026-09-16 21:40",
+      "next_action": "HR 面后等结果，周五前跟进",
+      "next_action_date": "2026-09-19",
+      "notes": "",
+      "jd_text": "",
+      "jd_id": "",
+      "history": [
+        {
+          "status": "已投递",
+          "at": "2026-09-16 21:40",
+          "note": "创建记录"
+        },
+        {
+          "status": "一面",
+          "at": "2026-09-16 21:40",
+          "note": ""
+        },
+        {
+          "status": "HR面",
+          "at": "2026-09-16 21:40",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "id": "675b240d",
+      "user_id": "default_user",
+      "company": "拼多多",
+      "position": "产品运营实习生",
+      "channel": "牛客",
+      "salary": "",
+      "city": "上海",
+      "status": "已挂",
+      "applied_at": "2026-09-01",
+      "updated_at": "2026-09-16 21:40",
+      "next_action": "",
+      "next_action_date": "",
+      "notes": "",
+      "jd_text": "",
+      "jd_id": "",
+      "history": [
+        {
+          "status": "已投递",
+          "at": "2026-09-16 21:40",
+          "note": "创建记录"
+        },
+        {
+          "status": "一面",
+          "at": "2026-09-16 21:40",
+          "note": ""
+        },
+        {
+          "status": "已挂",
+          "at": "2026-09-16 21:40",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "id": "a72b5104",
+      "user_id": "default_user",
+      "company": "哔哩哔哩",
+      "position": "用户运营实习生",
+      "channel": "官网",
+      "salary": "",
+      "city": "上海",
+      "status": "已投递",
+      "applied_at": "2026-08-26",
+      "updated_at": "2026-08-26 00:00",
+      "next_action": "",
+      "next_action_date": "",
+      "notes": "",
+      "jd_text": "",
+      "jd_id": "",
+      "history": [
+        {
+          "status": "已投递",
+          "at": "2026-09-16 21:40",
+          "note": "创建记录"
+        }
+      ]
+    },
+    {
+      "id": "8ac9621f",
+      "user_id": "default_user",
+      "company": "快手",
+      "position": "电商运营实习生",
+      "channel": "内推",
+      "salary": "",
+      "city": "北京",
+      "status": "已投递",
+      "applied_at": "2026-09-14",
+      "updated_at": "2026-09-14 00:00",
+      "next_action": "",
+      "next_action_date": "",
+      "notes": "",
+      "jd_text": "",
+      "jd_id": "",
+      "history": [
+        {
+          "status": "已投递",
+          "at": "2026-09-16 21:40",
+          "note": "创建记录"
+        }
+      ]
+    }
+  ]
+}

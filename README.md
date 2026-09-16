@@ -29,7 +29,7 @@ v3.1 把整个产品改成**简历优先**（参考 Teal / Huntr / Jobscan / 超
 > v2 自评说：「没有数据闭环，是这个产品最致命的问题。」
 > v3 的第一件事就是把它补上。→ [`python main.py self-review`](modules/self_review.py)
 
-## 求职闭环：四段 × 17 模块
+## 求职闭环：四段 × 17 个功能模块（`modules/` 下 19 个模块文件）
 
 ```
  定方向            备弹药                       上战场                  做决策
@@ -66,7 +66,7 @@ v3.1 把整个产品改成**简历优先**（参考 Teal / Huntr / Jobscan / 超
 
 ### 作为 Trae Skill 使用
 
-1. 下载本仓库 zip（或从 [Releases](https://github.com/Baijidot/ByteDance-Offer-Copilot-Skill/releases) 获取 `offer-copilot.zip`）
+1. 下载本仓库 zip（仓库页 **Code → Download ZIP**）
 2. 在 Trae 中导入 Skill，自动注册
 3. 说「帮我拆解这个 JD」「给我一份 60 秒自我介绍」「我腾讯一面过了，记一下」「帮我比一下这两个 Offer」即可触发
 
@@ -80,7 +80,8 @@ pip install -r requirements.txt
 python main.py web                 # http://localhost:8000
 ```
 
-打开后第一步是导入简历（粘贴或上传 .docx / .txt / .md），确认档案后进入工作台。
+打开后第一步是导入简历（粘贴或上传 .pdf / .docx / .txt / .md），确认档案后进入工作台。
+想先看看效果：`demo-seed/` 里有一套虚构人设的演示数据（简历 + 3 份 JD + 9 条投递记录）和一键灌入脚本，跑完即可复现演示状态。
 
 **配置 AI（可选）**：点侧栏底部「AI 未配置」→ 填 API Key（内置智谱 GLM / Kimi / DeepSeek / OpenAI 预设，
 任何 OpenAI 兼容接口都行）→ 测试连接 → 保存。Key 只存在本地 `user_data/settings.json`，也可以用环境变量
@@ -272,6 +273,9 @@ ByteDance-Offer-Copilot-Skill/
 | 面试追问靠 prompt 而非向量检索 | >30 轮对话会退化 | 待向量化 |
 | 黑话规则硬编码 | 无法识别新空话 | 待自进化 |
 | Offer 对比的五维打分靠用户主观 | 打分本身可能有偏 | LLM 层的「盲点」检测部分缓解，待引入外部数据 |
+| **Web 端模拟面试不显示压力值 / 压力曲线** | 功能表和页面文案都写了「AI 压力值」，`/api/interview/answer` 也把 `pressure` 返回了，但 `app.html` 目前没有渲染它；压力值只在 CLI（`python main.py cli`）里显示 | Web 端补压力曲线组件 |
+| **简历规则解析有三处已知粗糙**（`modules/profile.py`） | ① `_guess_target_role` 抓「求职意向」后整段不在 `\|` 处截断，会把「期望城市」一起带进目标岗位；② `_guess_job_type` 见到「实习」+「在读 / 届」判成校招；③ `_split_blocks` 按「≤40 字且无句末标点」猜项目标题。三处都靠「确认档案」那一步手改兜底，有 Key 时 LLM 精修覆盖大部分 | 逐条收紧正则 |
+| Offer 对比从看板导入时，薪资预填只认写了「万」且不带「月」的字串 | 「300元/天」「25k/月」「2万/月」一律留空由用户自己填，不做任何换算（宁缺勿错） | 加单位识别与换算 |
 
 ## 历史版本
 

@@ -4,6 +4,7 @@ __pycache__/
 growth_data.json
 campus_jobs.json
 user_data/
+!demo-seed/user_data/
 logs/
 *.backup/
 *.zip
