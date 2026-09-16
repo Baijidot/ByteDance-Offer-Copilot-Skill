@@ -1,5 +1,5 @@
 """
-ByteDance Offer Copilot — Shared Utilities
+Offer Copilot — Shared Utilities
 
 Provides the callLlm function that dispatches prompts to the active LLM.
 When running as a Trae Solo skill, the platform intercepts this
@@ -12,6 +12,57 @@ import os
 import re
 import time
 from typing import Any, Union
+
+
+def getLlmSettingsPath() -> str:
+    base = os.path.join(os.path.dirname(os.path.abspath(__file__)), "user_data")
+    return os.path.join(base, "settings.json")
+
+
+def loadLlmSettings() -> dict:
+    """读取 user_data/settings.json 里的 AI 配置（Web 端「AI 设置」写入）。"""
+    path = getLlmSettingsPath()
+    if os.path.exists(path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if isinstance(data, dict):
+                return data
+        except Exception:
+            pass
+    return {}
+
+
+def saveLlmSettings(settings: dict) -> dict:
+    base = os.path.dirname(getLlmSettingsPath())
+    os.makedirs(base, exist_ok=True)
+    current = loadLlmSettings()
+    for k in ("api_key", "base_url", "model"):
+        if settings.get(k):
+            current[k] = str(settings[k]).strip()
+    if "api_key" in settings and not settings.get("api_key"):
+        current.pop("api_key", None)  # 显式清空
+    with open(getLlmSettingsPath(), "w", encoding="utf-8") as f:
+        json.dump(current, f, ensure_ascii=False, indent=2)
+    return current
+
+
+def getLlmConfig() -> dict:
+    """
+    合成最终生效的 LLM 配置：设置文件 > 环境变量。
+    返回 {"api_key", "base_url", "model"}；base_url 兼容「根地址」和「完整 chat/completions 地址」。
+    """
+    saved = loadLlmSettings()
+    api_key = saved.get("api_key") or os.environ.get("TRADE_API_KEY") or os.environ.get("LLM_API_KEY") or ""
+    base_url = saved.get("base_url") or os.environ.get("LLM_BASE_URL") or "https://open.bigmodel.cn/api/paas/v4"
+    model = saved.get("model") or os.environ.get("LLM_MODEL") or "glm-4.6"
+    return {"api_key": api_key, "base_url": base_url, "model": model}
+
+
+def maskKey(key: str) -> str:
+    if not key:
+        return ""
+    return key[:6] + "****" + key[-4:] if len(key) > 12 else "****"
 
 
 def callLlm(prompt: str, system_prompt: str = "", output_format: str = "json") -> Union[dict, str]:
@@ -31,20 +82,41 @@ def callLlm(prompt: str, system_prompt: str = "", output_format: str = "json") -
     Returns:
         Parsed dict if output_format='json', otherwise a string
     """
-    # Try standalone API mode (provider-agnostic)
-    apiKey = os.environ.get("TRADE_API_KEY") or os.environ.get("LLM_API_KEY")
-    if apiKey:
+    # Standalone API mode (OpenAI-compatible: GLM / Kimi / DeepSeek / OpenAI ...)
+    cfg = getLlmConfig()
+    if cfg.get("api_key"):
         start = time.time()
-        sdk = __import__("anthropic")
-        client = sdk.Anthropic(api_key=apiKey)
-        response = client.messages.create(
-            model=os.environ.get("LLM_MODEL", "deepseek-v4-pro"),
-            max_tokens=4096,
-            system=system_prompt or getSystemPrompt(),
-            messages=[{"role": "user", "content": prompt}],
+        import httpx
+        url = cfg["base_url"].rstrip("/")
+        if not url.endswith("/chat/completions"):
+            url = url + "/chat/completions"
+        messages = []
+        messages.append({"role": "system", "content": system_prompt or getSystemPrompt()})
+        messages.append({"role": "user", "content": prompt})
+        payload = {"model": cfg["model"], "messages": messages, "max_tokens": 16384, "temperature": 0.6}
+        # 智谱推理模型（glm-5.x）默认开思考，长 prompt 时思考 token 会吃光上限导致正文为空；
+        # 报告类任务显式关闭（仅对智谱端点生效，其他厂商不传此参数）
+        if "bigmodel.cn" in cfg["base_url"]:
+            payload["thinking"] = {"type": "disabled"}
+        resp = httpx.post(
+            url,
+            headers={"Authorization": "Bearer " + cfg["api_key"]},
+            json=payload,
+            timeout=httpx.Timeout(240.0, connect=10.0),
         )
         elapsed = (time.time() - start) * 1000
-        text = response.content[0].text
+        resp.raise_for_status()
+        data = resp.json()
+        choice = (data.get("choices") or [{}])[0]
+        text = (choice.get("message") or {}).get("content") or ""
+        if not text.strip():
+            finish = choice.get("finish_reason", "?")
+            reasoning = (data.get("usage", {}).get("completion_tokens_details", {}) or {}).get("reasoning_tokens")
+            raise RuntimeError(
+                f"模型返回空内容（finish_reason={finish}"
+                + (f"，思考消耗 {reasoning} tokens" if reasoning else "")
+                + "）。可在「AI 设置」换一个非推理模型（如 glm-4.6）重试。"
+            )
         _logPerformance(len(prompt), elapsed, True)
         return parseResponse(text, output_format)
 
@@ -92,24 +164,24 @@ def safeCallLlm(prompt: str, system_prompt: str = "", output_format: str = "json
         result = None
         if fallback is not None:
             fallback["_error"] = str(e)
-            fallback["_retry_hint"] = "LLM调用失败，请重试或检查API配置"
+            fallback["_retry_hint"] = "AI 调用失败：请到「AI 设置」检查 Key / 模型，或稍后重试"
             return fallback
         if output_format != "json":
             return f"[错误] LLM调用失败: {str(e)}。请重试或输入更短的文本。"
         return {
             "error": str(e),
-            "markdown": ">  AI教练暂时不可用：" + str(e) + "\n>\n> 请稍后重试。如果持续失败，请检查 TRADE_API_KEY 环境变量。"
+            "markdown": "> ⚠️ AI 调用失败：" + str(e) + "\n>\n> 请到 Web 端「AI 设置」检查 Key / 模型，或稍后重试。"
         }
 
     # callLlm returned _trait marker — no real LLM call happened (no API key, not in Trae Solo)
     if isinstance(result, dict) and "_trait" in result:
         if fallback is not None:
             fallback["_error"] = "LLM未配置"
-            fallback["_retry_hint"] = "请设置 TRADE_API_KEY 环境变量或在 Trae Solo 中运行"
+            fallback["_retry_hint"] = "还没有配置 AI：打开侧栏「AI 设置」填入 API Key 即可"
             return fallback
         return {
             "error": "LLM未配置",
-            "markdown": ">  AI教练未配置\n>\n> 请设置 `TRADE_API_KEY` 环境变量，或在 Trae Solo 平台中运行此 Skill。"
+            "markdown": "> ⚠️ 还没有配置 AI\n>\n> 打开 Web 端侧栏的「AI 设置」，填入 API Key 即可使用全部 AI 功能（支持 GLM / Kimi / DeepSeek / OpenAI 等任何 OpenAI 兼容接口）。"
         }
 
     return result
@@ -118,21 +190,65 @@ def safeCallLlm(prompt: str, system_prompt: str = "", output_format: str = "json
 def parseResponse(text: str, fmt: str) -> Any:
     """Parse LLM response into requested format."""
     if fmt == "json":
-        # Try to extract JSON block
         text = text.strip()
-        if "```json" in text:
-            start = text.index("```json") + 7
-            end = text.index("```", start)
-            text = text[start:end].strip()
-        elif "```" in text:
-            start = text.index("```") + 3
-            end = text.index("```", start)
-            text = text[start:end].strip()
+        # 优先取 ```json / ``` 围栏块（容错：只有开头没有闭合时取到结尾）
+        m = re.search(r"```(?:json)?\s*\n?(.*?)```", text, flags=re.DOTALL)
+        if m:
+            text = m.group(1).strip()
+        else:
+            i, j = text.find("{"), text.rfind("}")
+            if i != -1:
+                text = text[i:j + 1] if j > i else text[i:]
         try:
             return json.loads(text)
         except json.JSONDecodeError:
+            repaired = _repairTruncatedJson(text)
+            if repaired is not None:
+                return repaired
             return {"raw": text}
     return text
+
+
+def _repairTruncatedJson(text: str) -> Any:
+    """
+    修复被 max_tokens 截断的 JSON：找到最后一个完整值的位置，裁掉残尾，再补齐未闭合的括号。
+    输出会缺最后半截字段，但整体结构可用（报告类输出可接受）。
+    """
+    if "{" not in text and "[" not in text:
+        return None
+    stack = []
+    in_str = False
+    esc = False
+    last_safe = 0
+    for i, ch in enumerate(text):
+        if in_str:
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == '"':
+                in_str = False
+            continue
+        if ch == '"':
+            in_str = True
+        elif ch in "{[":
+            stack.append(ch)
+        elif ch in "}]":
+            if stack:
+                stack.pop()
+            last_safe = i + 1
+        elif ch == ",":
+            last_safe = i
+    if not stack and not in_str:
+        return None
+    cut = text[:last_safe].rstrip().rstrip(",")
+    closes = {"{": "}", "[": "]"}
+    for b in reversed(stack):
+        cut += closes.get(b, "")
+    try:
+        return json.loads(cut)
+    except json.JSONDecodeError:
+        return None
 
 
 def fetchInput(source: str) -> tuple[str, str]:
@@ -167,7 +283,7 @@ def fetchInput(source: str) -> tuple[str, str]:
             import urllib.request
             req = urllib.request.Request(
                 source,
-                headers={'User-Agent': 'Mozilla/5.0 (compatible; ByteDanceOfferCopilot/2.1)'}
+                headers={'User-Agent': 'Mozilla/5.0 (compatible; OfferCopilot/3.0)'}
             )
             with urllib.request.urlopen(req, timeout=15) as resp:
                 html = resp.read().decode('utf-8', errors='replace')
@@ -196,18 +312,18 @@ def extractTextFromHtml(html: str) -> str:
 
 
 def getSystemPrompt() -> str:
-    """Return the v2 core system prompt — AI 互联网职业教练."""
-    return """你是 ByteDance Offer Copilot v2，一个真正的 AI 互联网职业教练。
+    """Return the v3 core system prompt — AI 求职全流程教练."""
+    return """你是 Offer Copilot v3，一个真正的 AI 互联网求职教练。
 
 你不是工具，你不是简历优化器。
-你是一个在字节跳动工作了 6 年的 P8 产品面试官。
-你面过 800+ 人，看过 20000+ 份简历。
-你带过 30+ 校招生，亲眼看着他们从学生变成产品经理。
+你是一个在互联网大厂工作 10 年的资深面试官兼职业教练。
+你面过 800+ 人，看过 20000+ 份简历，覆盖产品、技术、运营、市场、设计等所有主流职能。
+你带过 30+ 应届生和转行人，亲眼看着他们从学生和门外汉变成职业人。
 
 你的产品哲学：
-- 项目质量 > 学校名气。一个有三万 DAU 的二本学生，比一个只有课程作业的清华学生强十倍。
-- 增长案例 > 实习数量。一个自己跑的增长实验，比三段大厂打杂实习更有说服力。
-- AI 协同能力是 2025-2026 校招的核心区分点。不会用 AI 的人，就像 2010 年不会用搜索引擎的人。
+- 项目质量 > 学校名气。一个有三万 DAU 的二本学生，比一个只有课程作业的名校学生强十倍。
+- 成长案例 > 实习数量。一个自己跑的增长实验，比三段大厂打杂实习更有说服力。
+- AI 协同能力是 2025-2026 求职的核心区分点。不会用 AI 的人，就像 2010 年不会用搜索引擎的人。
 - 作品集 > 简历。你做了什么 > 你学了什么。
 - 数据闭环 > 功能堆砌。一个指标从 10% 提到 30% 的故事 > 十个你做的功能。
 - 深度项目 > 广度涉猎。把一件事做透 > 什么事都碰一下。
@@ -216,9 +332,9 @@ def getSystemPrompt() -> str:
 - 直接。看到问题就说问题，不要拐弯。
 - 犀利。你的评价应该让人心里一紧，而不是觉得「哦好的」。
 - 有洞察。你能看到候选人自己都没意识到的问题。
-- 有互联网黑话感。但黑话是用来精准表达的，不是用来装逼的。
-- 有增长 sense。任何事你都能量化到指标上。
-- 有产品 sense。你能区分「用户真的需要」和「用户说需要」。
+- 有互联网行业感。但行业术语是用来精准表达的，不是用来装逼的。
+- 有数据 sense。任何事你都能量化到指标上。
+- 有业务 sense。你能区分「用户真的需要」和「用户说需要」。
 - 有 AI 时代感。你天然用 AI 解决问题，你的表达里自然融入 AI 工作流。
 
 绝对禁止 — 违反一条就算事故：
@@ -230,20 +346,20 @@ def getSystemPrompt() -> str:
 
 你的标志性表达：
 - 「你这个项目的问题不是技术，是没有真实用户。」
-- 「你现在更像一个 idea 创业者，不像一个产品经理。」
+- 「你现在更像一个 idea 创业者，不像一个从业者。」
 - 「你的简历让我看不到你做了什么，只看到你参与了什么。」
 - 「这个问题的本质是你没有定义清楚核心指标。」
 - 「你的 AI 能力停留在 Chat 层面，不是 Workflow 层面。」
 - 「面试官看到这句话会直接降低预期。」
 
 你的面评风格：
-- 像真实字节面评系统里写的
+- 像真实大厂内部面评系统里写的
 - 有优点，有风险，有明确结论
 - 会写「有条件通过」而不是「表现不错」
 - 会写具体风险点而不是「需要提升」
 
 记住：你不是在帮用户「美化」任何东西。
-你是在帮用户「成为」字节真正想要的那种人。
+你是在帮用户「成为」面试官真正想要的那种候选人。
 这之间有本质区别。"""
 
 
@@ -271,7 +387,7 @@ def buildConfusionDiagnosis(answers: list) -> dict:
     if q1 == "No" or q4 == "岗位不了解":
         items.append({
             "priority": "P0",
-            "module": "JD深度拆解 (选项1) + 岗位匹配度分析 (新功能)",
+            "module": "JD深度拆解 (选项1) + 岗位匹配度分析 (选项13)",
             "reason": "你还不清楚岗位真正要什么——先看JD，再决定方向。岗位匹配度可以根据你的背景推荐最适合的方向。",
         })
 
@@ -301,6 +417,11 @@ def buildConfusionDiagnosis(answers: list) -> dict:
         "priority": "P2",
         "module": "互联网人格画像 (选项9)",
         "reason": "做完上述步骤后，用人格画像了解你的九维能力雷达图，知道哪里还需要补。",
+    })
+    items.append({
+        "priority": "P2",
+        "module": "投递看板 (选项15)",
+        "reason": "从今天起每一次投递都记下来。求职是漏斗，不记录就永远不知道自己卡在哪一层。",
     })
 
     lines = [

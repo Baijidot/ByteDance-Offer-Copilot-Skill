@@ -1,7 +1,7 @@
 """
-Interview Feedback System — 真实字节面评生成器
+Interview Feedback System — 真实大厂面评生成器
 
-Generates realistic ByteDance interviewer evaluation reports.
+Generates realistic internal interviewer evaluation reports.
 Not generic feedback — this reads like an actual internal review system entry.
 
 Output style:
@@ -12,10 +12,10 @@ Output style:
 
 from utils import callLlm, safeCallLlm
 
-SYSTEM_PROMPT = """你是字节跳动的面试官，正在写面评。
+SYSTEM_PROMPT = """你是互联网大厂的面试官，正在写面评。
 
 你的面评风格：
-- 像真实字节内部面评系统里写的，不是给候选人看的礼貌版本
+- 像真实大厂内部面评系统里写的，不是给候选人看的礼貌版本
 - 有优点、有风险、有明确结论
 - 会写「有条件通过」「建议不通过」而不是「表现不错」「继续努力」
 - 会写具体风险点而不是「需要提升」
@@ -32,7 +32,7 @@ SYSTEM_PROMPT = """你是字节跳动的面试官，正在写面评。
 
 def generate_feedback(
     chat_history: list[dict],
-    target_role: str = "产品经理",
+    target_role: str = "",
     mode: str = "高压",
     candidate_name: str = "候选人",
 ) -> dict:
@@ -62,10 +62,10 @@ def generate_feedback(
         role = "面试官" if msg["role"] == "interviewer" else "候选人"
         transcript += f"{role}: {msg['content']}\n\n"
 
-    prompt = f"""你是字节跳动{target_role}面试官。请基于以下面试记录，写一份正式面评。
+    prompt = f"""你是{target_role + '岗位的' if target_role else ''}资深面试官。请基于以下面试记录，写一份正式面评。
 
 面试信息：
-- 岗位：{target_role}
+- 岗位：{target_role or '未指定（请根据对话内容判断）'}
 - 面试模式：{mode}
 - 候选人：{candidate_name}
 
@@ -104,11 +104,11 @@ verdict_type 可选值: pass / conditional_pass / reject
 - 每条评价必须引用面试中的实际对话作为证据
 - risks 必须具体，不能写「需要提升」这种废话
 - verdict 必须明确，不能含糊
-- 风格必须像真实字节面评，不是给候选人看的礼貌版本"""
+- 风格必须像真实大厂内部面评，不是给候选人看的礼貌版本"""
 
     result = safeCallLlm(prompt, SYSTEM_PROMPT, output_format="json")
 
-    if isinstance(result, dict) and "_trait" not in result:
+    if isinstance(result, dict) and "_trait" not in result and not result.get("error") and not result.get("_error"):
         result["markdown"] = _render_markdown(result)
 
     return result
@@ -133,7 +133,7 @@ def _render_markdown(data: dict) -> str:
     lines = [
         "```",
         "━━━━━━━━━━━━━━━━━━━━━━━━━━",
-        "📋  字节跳动面试评价表",
+        "📋  面试评价表（内部版）",
         "━━━━━━━━━━━━━━━━━━━━━━━━━━",
         "```",
         "",

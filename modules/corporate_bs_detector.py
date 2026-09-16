@@ -43,7 +43,7 @@ EMPTY_PHRASES = {
     "优化产品体验": {"reason": "空话——优化了什么？效果如何？", "replace": "通过[具体改动]，将[核心指标]从X优化至Y"},
     "赋能": {"reason": "互联网黑话过度使用——具体赋能了什么？", "replace": "为[具体角色]提供[具体能力]，使其[具体结果]"},
     "闭环": {"reason": "黑话——如果说不清闭环的具体环节，等于没说", "replace": "完成从[发现问题]到[验证效果]的完整链路"},
-    "抓手": {"reason": "阿里黑话——字节不这么说", "replace": "切入点、核心杠杆"},
+    "抓手": {"reason": "黑话堆砌——精准表达不这么说", "replace": "切入点、核心杠杆"},
     "对齐": {"reason": "黑话——你想说的是达成共识还是同步信息？", "replace": "达成共识、同步"},
     "拉通": {"reason": "黑话——拉通了什么？", "replace": "协调、推动跨团队协作"},
 }
@@ -134,7 +134,7 @@ def detect(text: str) -> dict:
     return result
 
 
-def rewrite(text: str, target_role: str = "产品经理") -> dict:
+def rewrite(text: str, target_role: str = "") -> dict:
     """
     Deep rewrite — use LLM to transform the entire text into internet-professional style.
 
@@ -147,7 +147,7 @@ def rewrite(text: str, target_role: str = "产品经理") -> dict:
     """
     prompt = f"""请将以下文本从「学生表达」重构为「互联网化表达」。
 
-目标岗位：{target_role}
+目标岗位：{target_role or '未指定'}
 
 原始文本：
 {text}
@@ -173,7 +173,7 @@ def rewrite(text: str, target_role: str = "产品经理") -> dict:
 
     result = safeCallLlm(prompt, SYSTEM_PROMPT, output_format="json")
 
-    if isinstance(result, dict) and "_trait" not in result:
+    if isinstance(result, dict) and "_trait" not in result and not result.get("error") and not result.get("_error"):
         result["original"] = text
         result["markdown"] = _render_rewrite_markdown(result)
 

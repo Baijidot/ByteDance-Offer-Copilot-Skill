@@ -60,7 +60,7 @@ def start_group_interview(role: str, other_roles: list, topic: str) -> dict:
                          fallback={"opening": f"讨论主题：{topic}\n参与者：{', '.join(all_roles)}\n请{role}先发表观点。",
                                    "all_roles": all_roles, "current_round": 0, "max_rounds": 5})
 
-    if isinstance(result, dict) and "_trait" not in result:
+    if isinstance(result, dict) and "_trait" not in result and not result.get("error") and not result.get("_error"):
         result["session_id"] = "group_session"
         result["history"] = []
         result["role"] = role
@@ -126,7 +126,7 @@ def group_respond(session_state: dict, user_answer: str) -> dict:
                          fallback={"responses": [{"role": r, "content": "（请阐述你的观点）"} for r in other_roles],
                                    "phase": "discussion", "is_complete": is_final})
 
-    if isinstance(result, dict) and "_trait" not in result:
+    if isinstance(result, dict) and "_trait" not in result and not result.get("error") and not result.get("_error"):
         for resp in result.get("responses", []):
             session_state["history"].append({"role": resp["role"], "content": resp["content"]})
         result["current_round"] = current_round
@@ -198,7 +198,7 @@ def group_evaluate(session_state: dict) -> dict:
     result = safeCallLlm(prompt, GROUP_SYSTEM_PROMPT, output_format="json",
                          fallback={"overall": "评估暂时不可用", "markdown": "> 群面评估暂时不可用，请重试。"})
 
-    if isinstance(result, dict) and "_trait" not in result:
+    if isinstance(result, dict) and "_trait" not in result and not result.get("error") and not result.get("_error"):
         result["markdown"] = _render_group_markdown(result, session_state)
 
     return result

@@ -4,18 +4,19 @@ Internet Persona Radar — 互联网人格画像 + 雷达图数据
 Generates a 9-dimension radar profile based on resume, projects,
 interview answers, content experience, and AI projects.
 
-Outputs JSON radar data + a brutal P8-level critique of the persona.
+Outputs JSON radar data + a brutal senior-interviewer critique of the persona.
 """
 
 from utils import callLlm, safeCallLlm
 
-SYSTEM_PROMPT = """你是字节跳动的 P8 产品负责人。你的核心能力是看人。
+SYSTEM_PROMPT = """你是互联网大厂的 P8 级业务负责人。你的核心能力是看人。
 
-你能在 5 分钟内判断一个校招生是什么类型的产品人：
-- 是 idea 创业者还是产品经理？
+你能在 5 分钟内判断一个候选人是什么类型的互联网人：
+- 是 idea 创业者还是真正的执行者？
 - 是真正的 growth hacker 还是只会说增长？
 - 是 AI Native 还是 ChatGPT User？
 - 是真正做过用户增长还是自己觉得懂？
+- 无论候选人目标是技术、产品、运营还是设计，你都用同一套「互联网人格」标准去看
 
 你看人极准。你从不夸人。你的评价让人脸红但心服。"""
 
@@ -92,7 +93,7 @@ def generate_persona(
     interview_answers: str = "",
     content_experience: str = "",
     ai_projects: str = "",
-    target_role: str = "产品经理",
+    target_role: str = "",
 ) -> dict:
     """
     Generate a 9-dimension internet persona profile.
@@ -143,7 +144,7 @@ def generate_persona(
 【候选人信息】
 {combined[:6000]}
 
-【目标岗位】{target_role}
+【目标岗位】{target_role or '未指定'}
 
 【评分维度】
 {dims_desc}
@@ -184,7 +185,7 @@ def generate_persona(
 
     result = safeCallLlm(prompt, SYSTEM_PROMPT, output_format="json")
 
-    if isinstance(result, dict) and "_trait" not in result:
+    if isinstance(result, dict) and "_trait" not in result and not result.get("error") and not result.get("_error"):
         result["radar_data"] = _build_radar_data(result)
         result["markdown"] = _render_markdown(result)
 

@@ -12,7 +12,7 @@ Style: brutally honest, internet industry standard.
 from utils import callLlm, safeCallLlm
 import re
 
-SYSTEM_PROMPT = """你是字节跳动的技术评审。你看过 10000+ 个项目，能在 30 秒内分辨：
+SYSTEM_PROMPT = """你是互联网大厂的资深技术评审。你看过 10000+ 个项目，能在 30 秒内分辨：
 - 这是真正有人用的产品
 - 这是课程作业套壳
 - 这是 AI 生成的项目描述
@@ -51,7 +51,7 @@ def detect_authenticity(project_text: str) -> dict:
     rule_flags = _rule_detect(project_text)
 
     # Phase 2: LLM deep analysis
-    prompt = f"""请检测以下项目的真实性。像一个字节技术评审一样审查。
+    prompt = f"""请检测以下项目的真实性。像一个大厂技术评审一样审查。
 
 【项目描述】
 {project_text[:5000]}
@@ -95,7 +95,7 @@ def detect_authenticity(project_text: str) -> dict:
 
     result = safeCallLlm(prompt, SYSTEM_PROMPT, output_format="json")
 
-    if isinstance(result, dict) and "_trait" not in result:
+    if isinstance(result, dict) and "_trait" not in result and not result.get("error") and not result.get("_error"):
         # Merge rule flags
         all_flags = rule_flags + result.get("red_flags", [])
         result["red_flags"] = all_flags

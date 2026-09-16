@@ -4,7 +4,7 @@ JD Analyzer — 拆解岗位 JD，揭示面试官真正的考察点。
 Takes raw JD text and returns structured analysis:
 - Core capabilities being tested
 - Subtext / hidden meaning of each JD phrase
-- Ideal candidate profile ByteDance is really looking for
+- Ideal candidate profile the company is really looking for
 - 30-day growth roadmap
 
 No mock data. Every output is LLM-driven via callLlm().
@@ -13,7 +13,7 @@ No mock data. Every output is LLM-driven via callLlm().
 import json
 from utils import callLlm, fetchInput, safeCallLlm
 
-SYSTEM_PROMPT = """你是字节跳动的 P8 级产品面试官，8 年产品经验，面试过 500+ 候选人。
+SYSTEM_PROMPT = """你是互联网大厂的 P8 级资深面试官，10 年经验，面试过 500+ 候选人，覆盖产品、技术、运营、市场、设计等所有主流职能。
 你极度擅长从 JD 中读出潜台词。
 你的风格：直接、犀利、有洞察、不讲废话、不说鸡汤。
 
@@ -23,11 +23,12 @@ SYSTEM_PROMPT = """你是字节跳动的 P8 级产品面试官，8 年产品经�
 3. 输出必须有层级、有 Emoji、有视觉感
 4. 绝对不允许模板化表达
 5. 禁止说「加油」「努力」等空洞词汇
+6. 先判断 JD 属于哪类职能（产品/技术/运营/市场/设计/数据/游戏等），再按该职能的真实考察标准拆解
 
-AI 编程工具现状（2026年5月）：
+AI 编程工具现状（2026年）：
 - 2026 年的 AI 编程已进入 Agent 时代，AI 可以自主完成 Plan → Code → Review → Deploy 全流程
-- 主流工具包括 Trae Solo（字节）、Codex（OpenAI）、Cursor 等
-- 字节跳动内部已全面推行 AI 辅助编程，面试官会考察候选人是否将 AI 嵌入日常工作流
+- 主流工具包括 Trae、Codex、Cursor 等
+- 头部互联网公司已全面推行 AI 辅助工作流，面试官会考察候选人是否将 AI 嵌入日常工作
 - AI 协同深度分两层：Chat 层面（问答式）vs Workflow 层面（AI 自主完成完整任务链路），后者才是亮点"""
 
 
@@ -36,9 +37,9 @@ def analyze(jd_input: str, job_title: str = "", jd_url: str = "") -> dict:
     拆解岗位 JD，返回结构化分析。
 
     支持三种输入方式（自动识别）：
-    1. MD 文件路径    → "E:/jobs/字节产品经理.md"
-    2. 网站 URL        → "https://jobs.bytedance.com/xxx"
-    3. 直接粘贴 JD 文本 → "负责抖音内容生态..."
+    1. MD 文件路径    → "./jobs/后端开发工程师.md"
+    2. 网站 URL        → "https://careers.example.com/job/xxx"
+    3. 直接粘贴 JD 文本 → "负责短视频内容生态..."
 
     Args:
         jd_input: JD 文本 / 文件路径 / URL
@@ -60,7 +61,7 @@ def analyze(jd_input: str, job_title: str = "", jd_url: str = "") -> dict:
     # Auto-detect input type and extract content
     jd_text, source_type = fetchInput(jd_input)
 
-    prompt = f"""请深度拆解以下字节跳动岗位 JD：
+    prompt = f"""请深度拆解以下岗位 JD：
 
 【岗位名称】
 {job_title or '未提供'}
@@ -77,7 +78,7 @@ def analyze(jd_input: str, job_title: str = "", jd_url: str = "") -> dict:
 ```json
 {{
   "job_title": "岗位名称",
-  "jd_type": "产品经理/游戏策划/AI产品/运营/增长",
+  "jd_type": "产品/技术/运营/市场/设计/数据/游戏/其他",
   "core_capabilities": [
     {{
       "name": "能力名称",
@@ -121,7 +122,7 @@ def analyze(jd_input: str, job_title: str = "", jd_url: str = "") -> dict:
     result = callLlm(prompt, SYSTEM_PROMPT, output_format="json")
 
     # Attach metadata
-    if isinstance(result, dict) and "_trait" not in result:
+    if isinstance(result, dict) and "_trait" not in result and not result.get("error") and not result.get("_error"):
         result["source_type"] = source_type
         result["markdown"] = _render_markdown(result)
     else:
@@ -142,16 +143,20 @@ def _render_markdown(data: dict) -> str:
     ]
 
     for cap in data.get("core_capabilities", []):
-        lines.append(f"| {cap['name']} | {cap['weight']} | {cap['positive']} | {cap['negative']} |")
+        if not isinstance(cap, dict) or not cap.get("name"):
+            continue
+        lines.append(f"| {cap.get('name')} | {cap.get('weight', '')} | {cap.get('positive', '')} | {cap.get('negative', '')} |")
 
     lines.extend(["", "## 二、岗位潜台词", ""])
     for sub in data.get("subtexts", []):
-        lines.append(f"> **JD 原文:** 「{sub['original']}」")
-        lines.append(f"> 👉 **潜台词:** {sub['meaning']}")
-        lines.append(f"> 💡 {sub['insight']}")
+        if not isinstance(sub, dict) or not sub.get("original"):
+            continue
+        lines.append(f"> **JD 原文:** 「{sub.get('original')}」")
+        lines.append(f"> 👉 **潜台词:** {sub.get('meaning', '')}")
+        lines.append(f"> 💡 {sub.get('insight', '')}")
         lines.append("")
 
-    lines.extend(["", "## 三、字节真正想要的人", ""])
+    lines.extend(["", "## 三、这个岗位真正想要的人", ""])
     ideal = data.get("ideal_candidate", {})
     for category, items in ideal.items():
         lines.append(f"### {category}")
@@ -163,7 +168,9 @@ def _render_markdown(data: dict) -> str:
     lines.append("| 时间段 | 核心任务 | 具体行动 | 产出物 | 预期效果 |")
     lines.append("|--------|----------|----------|--------|----------|")
     for step in data.get("growth_path", []):
-        lines.append(f"| {step['period']} | {step['task']} | {step['actions']} | {step['output']} | {step['effect']} |")
+        if not isinstance(step, dict):
+            continue
+        lines.append(f"| {step.get('period', '')} | {step.get('task', '')} | {step.get('actions', '')} | {step.get('output', '')} | {step.get('effect', '')} |")
 
     lines.extend(["", "## 五、决胜关键", ""])
     lines.append(f"> {data.get('key_insight', '')}")

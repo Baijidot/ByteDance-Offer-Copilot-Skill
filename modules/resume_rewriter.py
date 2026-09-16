@@ -1,5 +1,5 @@
 """
-Resume Rewriter — 将「学生腔」重构为字节味的互联网化表达。
+Resume Rewriter — 将「学生腔」重构为大厂味的互联网化表达。
 
 Transforms:
 - 「参与」→「主导并推进」
@@ -14,8 +14,8 @@ No mock data. Every rewrite is LLM-driven.
 
 from utils import callLlm, safeCallLlm
 
-SYSTEM_PROMPT = """你是字节跳动的 P8 产品面试官，同时也是简历筛选专家。
-你每年筛选 5000+ 份校招简历，深知什么样的表达能通过筛选。
+SYSTEM_PROMPT = """你是互联网大厂的 P8 级面试官，同时也是简历筛选专家。
+你每年筛选 5000+ 份校招和社招简历，覆盖产品、技术、运营、市场、设计等职能，深知什么样的表达能通过筛选。
 
 改写原则：
 1. 强调结果和数据，而非过程
@@ -24,6 +24,7 @@ SYSTEM_PROMPT = """你是字节跳动的 P8 产品面试官，同时也是简历
 4. 强调 AI 协同 — 展示你如何用 AI 提升效率
 5. 强调效率 — 用时间量化成果（「72 小时完成」而非「花了三个月」）
 6. 强调闭环 — 从发现问题到解决问题到验证效果
+7. 根据目标岗位职能调整表达重点（技术岗突出架构与性能指标，产品岗突出决策与业务结果，运营岗突出用户与转化数据）
 
 禁止：
 - 「负责」「参与」「协助」等弱动词
@@ -32,9 +33,9 @@ SYSTEM_PROMPT = """你是字节跳动的 P8 产品面试官，同时也是简历
 - 鸡汤和自嗨"""
 
 
-def rewrite_project(original_text: str, target_role: str = "产品经理") -> dict:
+def rewrite_project(original_text: str, target_role: str = "") -> dict:
     """
-    将项目经历改写为字节风格。
+    将项目经历改写为大厂风格。
 
     Args:
         original_text: 原始项目描述
@@ -48,13 +49,13 @@ def rewrite_project(original_text: str, target_role: str = "产品经理") -> di
             "markdown": str
         }
     """
-    prompt = f"""请将以下学生项目经历，改写成字节味的互联网化表达：
+    prompt = f"""请将以下学生项目经历，改写成大厂味的互联网化表达：
 
 【原始项目经历】
 {original_text}
 
 【目标岗位】
-{target_role}
+{target_role or '未指定（请根据项目内容判断最匹配的职能）'}
 
 请严格按以下 JSON 结构输出：
 
@@ -79,7 +80,7 @@ def rewrite_project(original_text: str, target_role: str = "产品经理") -> di
 
     result = safeCallLlm(prompt, SYSTEM_PROMPT, output_format="json")
 
-    if isinstance(result, dict) and "_trait" not in result:
+    if isinstance(result, dict) and "_trait" not in result and not result.get("error") and not result.get("_error"):
         result["markdown"] = _render_markdown(result)
 
     return result
@@ -90,7 +91,7 @@ def rewrite_intro(
     school: str = "",
     major: str = "",
     highlights: str = "",
-    target_role: str = "产品经理",
+    target_role: str = "",
 ) -> dict:
     """
     改写自我介绍。
@@ -98,7 +99,7 @@ def rewrite_intro(
     Returns:
         {"30s": str, "60s": str, "original": str, "markdown": str}
     """
-    prompt = f"""改写以下自我介绍为字节风格：
+    prompt = f"""改写以下自我介绍为大厂面试风格：
 
 【原始自我介绍】
 {original_text}
@@ -107,7 +108,7 @@ def rewrite_intro(
 学校：{school or '未提供'}
 专业：{major or '未提供'}
 核心亮点：{highlights or '未提供'}
-目标岗位：{target_role}
+目标岗位：{target_role or '未指定'}
 
 输出 JSON：
 ```json
@@ -161,7 +162,7 @@ def portfolio_advice(portfolio_items: str, target_role: str, weaknesses: str = "
 
 def _render_markdown(data: dict) -> str:
     """Render rewrite result as Markdown."""
-    lines = ["# 🔥 字节味简历重构", ""]
+    lines = ["# 🔥 简历互联网化重构", ""]
 
     if data.get("rewritten"):
         lines.append("## 改写后")

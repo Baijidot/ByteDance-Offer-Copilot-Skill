@@ -19,7 +19,8 @@ v2 Upgrades:
 from utils import callLlm, safeCallLlm
 from typing import Optional
 
-SYSTEM_PROMPT = """你是字节跳动的真实面试官。不是模拟，不是角色扮演——你就是。
+SYSTEM_PROMPT = """你是互联网大厂的真实面试官。不是模拟，不是角色扮演——你就是。
+你能面试产品、技术、运营、市场、设计等所有主流职能的候选人，会根据目标岗位切换考察重点。
 
 你的面试风格取决于当前模式：
 
@@ -64,7 +65,7 @@ SYSTEM_PROMPT = """你是字节跳动的真实面试官。不是模拟，不是�
 - 面试结束必须给出明确结论"""
 
 
-WARM_SYSTEM_PROMPT = """你是一个暖心导师型的字节面试官。你不是来拷打候选人的，你是来帮 TA 发现自己的潜力。
+WARM_SYSTEM_PROMPT = """你是一个暖心导师型的大厂面试官。你不是来拷打候选人的，你是来帮 TA 发现自己的潜力。
 
 你的风格：
 - 鼓励式提问：发现候选人的闪光点，帮 TA 挖掘自己没有意识到的优势
@@ -114,12 +115,12 @@ def summarize_history(chat_history: list, max_length: int = 500) -> str:
     return result if isinstance(result, str) else str(result)
 
 
-def start_interview(mode: str = "高压", target_role: str = "产品经理", jd_text: str = "") -> dict:
+def start_interview(mode: str = "高压", target_role: str = "", jd_text: str = "") -> dict:
     """
     Start a new interview session.
 
     Args:
-        mode: 温和 / 高压 / 地狱
+        mode: 温和 / 高压 / 地狱 / 暖心
         target_role: Target position
         jd_text: Optional JD for context
 
@@ -130,7 +131,7 @@ def start_interview(mode: str = "高压", target_role: str = "产品经理", jd_
 
     system_prompt = WARM_SYSTEM_PROMPT if mode == "暖心" else SYSTEM_PROMPT
 
-    prompt = f"""你正在面试一位{target_role}候选人。
+    prompt = f"""你正在面试一位{target_role or '目标岗位'}候选人。
 
 岗位 JD: {jd_text or '未提供'}
 
@@ -158,7 +159,7 @@ def start_interview(mode: str = "高压", target_role: str = "产品经理", jd_
 def respond(
     user_answer: str,
     mode: str = "高压",
-    target_role: str = "产品经理",
+    target_role: str = "",
     jd_text: str = "",
     chat_history: Optional[list] = None,
 ) -> dict:
@@ -193,6 +194,7 @@ def respond(
     if len(chat_history) > 60:
         summary = summarize_history(chat_history)
         recent = chat_history[-10:]
+        n = (len(chat_history) - 10) // 2
         history_text = f"[前{n}轮摘要]\n{summary}\n\n[最近5轮对话]\n"
         for msg in recent:
             role = "面试官" if msg["role"] == "interviewer" else "候选人"
@@ -214,7 +216,7 @@ def respond(
 鼓励必须具体，比如「你刚才提到的XX数据很有说服力」「你在XX项目中的owner意识很明显」。
 """
 
-    prompt = f"""你正在面试一位{target_role}候选人。模式: {mode}
+    prompt = f"""你正在面试一位{target_role or '目标岗位'}候选人。模式: {mode}
 
 {contradiction_hint}
 {encouragement_hint}
@@ -255,7 +257,7 @@ def respond(
 def evaluate(
     chat_history: list[dict],
     mode: str = "高压",
-    target_role: str = "产品经理",
+    target_role: str = "",
 ) -> dict:
     """
     Evaluate the complete interview. v2: harsher, more realistic.
@@ -265,14 +267,14 @@ def evaluate(
         role = "面试官" if msg["role"] == "interviewer" else "候选人"
         transcript += f"{role}: {msg['content']}\n\n"
 
-    prompt = f"""请评估以下模拟面试。岗位：{target_role}，模式：{mode}
+    prompt = f"""请评估以下模拟面试。岗位：{target_role or '未指定（请根据对话判断）'}，模式：{mode}
 
 面试记录:
 {transcript[:6000]}
 
 评分维度（1-10分）：
-- 产品 Sense — 能否判断什么是好产品
-- 增长意识 — 是否关注用户增长和 ROI
+- 专业深度 — 岗位核心能力是否扎实（技术岗看工程功底，产品岗看产品判断，运营/市场岗看用户与转化理解）
+- 业务/增长意识 — 是否关注用户、增长和 ROI
 - 数据思维 — 能否定义核心指标并用数据验证
 - 执行力/Owner 意识 — 是否主动推动而非被动执行
 - AI 协同能力 — AI 使用深度（Chat 层面 vs Workflow 层面）
@@ -284,8 +286,8 @@ def evaluate(
 {{
   "overall_score": 6.5,
   "dimension_scores": {{
-    "产品Sense": 6.0,
-    "增长意识": 5.0,
+    "专业深度": 6.0,
+    "业务/增长意识": 5.0,
     "数据思维": 6.5,
     "执行力/Owner意识": 7.0,
     "AI协同能力": 5.5,
@@ -321,7 +323,7 @@ def evaluate(
 
     result = safeCallLlm(prompt + warm_requirement, system_prompt, output_format="json")
 
-    if isinstance(result, dict) and "_trait" not in result:
+    if isinstance(result, dict) and "_trait" not in result and not result.get("error") and not result.get("_error"):
         result["markdown"] = _render_evaluation(result, mode)
 
     return result

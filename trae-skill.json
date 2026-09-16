@@ -1,11 +1,28 @@
 {
-  "name": "bytedance-coach",
-  "version": "2.3.0",
-  "description": "ByteDance校招AI职业教练 — JD拆解、Offer概率预测、简历重构、模拟面试（温和/高压/地狱/暖心）、面评报告、黑话检测、矛盾检测、人格画像、项目真实性审查、成长规划、岗位匹配度分析、求职迷茫诊断、群面模拟、面试会话持久化",
+  "name": "offer-copilot",
+  "version": "3.2.0",
+  "description": "AI 求职全流程教练（简历优先，Web 端可配置 GLM/Kimi/DeepSeek 等 OpenAI 兼容接口）— 导入简历建立档案，岗位库 JD 匹配分（硬技能/软技能/硬门槛），投递看板漏斗，自我介绍/项目讲稿，模拟面试，面评，黑话检测，Offer 六维对比；覆盖校招/社招/实习/转行全职能",
   "entry_point": "main.py",
   "entry_function": "run_skill",
   "author": "Baijidot",
-  "tags": ["career", "interview", "resume", "bytedance", "campus-recruitment", "ai-coach", "product-manager"],
-  "dependencies": ["rich>=13.0.0", "fastapi>=0.115.0", "uvicorn>=0.32.0"],
+  "tags": [
+    "career",
+    "job-hunting",
+    "interview",
+    "resume",
+    "offer",
+    "campus-recruitment",
+    "job-switch",
+    "ai-coach",
+    "application-tracker"
+  ],
+  "dependencies": [
+    "rich>=13.0.0",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.32.0",
+    "python-multipart>=0.0.9",
+    "reportlab>=4.2.0",
+    "python-docx>=1.1.0"
+  ],
   "min_trae_version": "1.0.0"
 }

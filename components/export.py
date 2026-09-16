@@ -22,7 +22,7 @@ def export_resume(resume_text: str, format: str = "pdf", output_dir: str = None)
     Returns:
         File path to the generated document.
     """
-    output_dir = output_dir or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "outputs")
+    output_dir = os.path.abspath(output_dir or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "outputs"))
     os.makedirs(output_dir, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
@@ -73,6 +73,43 @@ def _parse_markdown_sections(text: str) -> list:
     return sections
 
 
+_CJK_FONT_CANDIDATES = [
+    # Windows
+    "C:/Windows/Fonts/msyh.ttf",
+    "C:/Windows/Fonts/simhei.ttf",
+    # macOS
+    "/Library/Fonts/Arial Unicode.ttf",
+    "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+    # Linux
+    "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
+    "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttf",
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.otf",
+]
+
+
+def _register_cjk_font() -> str:
+    """
+    Register a font that can render Chinese and return its name.
+
+    reportlab's built-in Helvetica has no CJK glyphs, so Chinese text renders as
+    black boxes. Prefer a system TTF; fall back to reportlab's bundled
+    STSong-Light CID font, which needs no external file.
+    """
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+
+    for path in _CJK_FONT_CANDIDATES:
+        if os.path.exists(path):
+            try:
+                pdfmetrics.registerFont(TTFont("ResumeCJK", path))
+                return "ResumeCJK"
+            except Exception:
+                continue
+    pdfmetrics.registerFont(UnicodeCIDFont("STSong-Light"))
+    return "STSong-Light"
+
+
 def _export_pdf(text: str, output_dir: str, timestamp: str) -> str:
     """Export resume as styled PDF using reportlab."""
     try:
@@ -86,7 +123,7 @@ def _export_pdf(text: str, output_dir: str, timestamp: str) -> str:
         fallback_path = os.path.join(output_dir, f"resume_{timestamp}.txt")
         with open(fallback_path, "w", encoding="utf-8") as f:
             f.write(text)
-        return fallback_path + " (reportlab not installed — saved as text)"
+        return fallback_path
 
     output_path = os.path.join(output_dir, f"resume_{timestamp}.pdf")
     doc = SimpleDocTemplate(
@@ -96,20 +133,24 @@ def _export_pdf(text: str, output_dir: str, timestamp: str) -> str:
     )
 
     styles = getSampleStyleSheet()
+    font_name = _register_cjk_font()
     accent = HexColor("#3d3dff")
-    dark = HexColor("#1a1a20")
-    body_color = HexColor("#e8e8ed")
+    body_color = HexColor("#2a2a33")
 
     title_style = ParagraphStyle(
-        "ResumeTitle", parent=styles["Heading1"],
+        "ResumeTitle", parent=styles["Heading1"], fontName=font_name,
         fontSize=18, textColor=accent, spaceAfter=6, spaceBefore=0,
     )
     h2_style = ParagraphStyle(
-        "ResumeH2", parent=styles["Heading2"],
+        "ResumeH2", parent=styles["Heading2"], fontName=font_name,
         fontSize=14, textColor=accent, spaceAfter=4, spaceBefore=12,
     )
+    h3_style = ParagraphStyle(
+        "ResumeH3", parent=styles["Heading3"], fontName=font_name,
+        fontSize=12, textColor=body_color, spaceAfter=2, spaceBefore=8,
+    )
     body_style = ParagraphStyle(
-        "ResumeBody", parent=styles["Normal"],
+        "ResumeBody", parent=styles["Normal"], fontName=font_name,
         fontSize=10, textColor=body_color, leading=16,
     )
     bullet_style = ParagraphStyle(
@@ -118,7 +159,7 @@ def _export_pdf(text: str, output_dir: str, timestamp: str) -> str:
     )
     quote_style = ParagraphStyle(
         "ResumeQuote", parent=body_style,
-        leftIndent=16, textColor=HexColor("#9e9eaa"), fontName="Helvetica-Oblique",
+        leftIndent=16, textColor=HexColor("#666677"),
     )
 
     story = []
@@ -136,7 +177,7 @@ def _export_pdf(text: str, output_dir: str, timestamp: str) -> str:
             story.append(Paragraph(_sanitize(section.get("text", "")), h2_style))
 
         elif stype == "h3":
-            story.append(Paragraph(_sanitize(section.get("text", "")), styles["Heading3"]))
+            story.append(Paragraph(_sanitize(section.get("text", "")), h3_style))
 
         # Body lines
         for line in section.get("lines", []):
@@ -178,16 +219,18 @@ def _export_docx(text: str, output_dir: str, timestamp: str) -> str:
         fallback_path = os.path.join(output_dir, f"resume_{timestamp}.txt")
         with open(fallback_path, "w", encoding="utf-8") as f:
             f.write(text)
-        return fallback_path + " (python-docx not installed — saved as text)"
+        return fallback_path
 
     output_path = os.path.join(output_dir, f"resume_{timestamp}.docx")
     doc = Document()
 
-    # Set default font
+    # Set default font (with an East Asian fallback so Chinese renders consistently)
+    from docx.oxml.ns import qn
     style = doc.styles["Normal"]
     font = style.font
     font.name = "Calibri"
     font.size = Pt(11)
+    style.element.rPr.rFonts.set(qn("w:eastAsia"), "Microsoft YaHei")
 
     sections = _parse_markdown_sections(text)
     for section in sections:

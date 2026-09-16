@@ -1,19 +1,19 @@
 [project]
-name = "bytedance-offer-copilot"
-version = "2.1.0"
-description = "AI 互联网职业教练 — 字节跳动校招备战 Skill"
+name = "offer-copilot"
+version = "3.0.0"
+description = "AI 求职全流程教练 — 从 JD 拆解到 Offer 选择的闭环（校招/社招/实习/转行，全职能）"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.9"
 dependencies = [
     "rich>=13.0.0",
 ]
-optional-dependencies = { web = ["fastapi", "uvicorn"], llm = ["trae-sdk"] }
+optional-dependencies = { web = ["fastapi", "uvicorn", "python-multipart"], export = ["reportlab", "python-docx"], llm = ["anthropic"] }
 
 [project.scripts]
-boc = "main:main"
-boc-web = "main:run_web"
-boc-cli = "main:run_cli"
+oc = "main:main"
+oc-web = "main:run_web"
+oc-cli = "main:run_cli"
 
 [build-system]
 requires = ["setuptools>=64"]

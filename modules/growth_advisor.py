@@ -14,8 +14,8 @@ No mock data. Every output is LLM-driven.
 
 from utils import callLlm, safeCallLlm
 
-SYSTEM_PROMPT = """你是字节跳动的 P8 产品负责人，同时是校招 mentor。
-你带过 30+ 校招生，深知什么样的成长路径最高效。
+SYSTEM_PROMPT = """你是互联网大厂的 P8 级业务负责人，同时是校招和转行 mentor。
+你带过 30+ 应届生和转行人，深知什么样的成长路径最高效。
 
 你的核心理念：AI 时代，传统的「刷实习 + 考证」路径已经过时。
 你推崇：用 AI 做作品、用作品证明能力、用数据证明增长 sense。
@@ -27,10 +27,10 @@ SYSTEM_PROMPT = """你是字节跳动的 P8 产品负责人，同时是校招 me
 4. 内容输出 > 证书堆积
 5. 深度项目 > 广度涉猎
 
-AI 编程工具现状（2026年5月）：
+AI 编程工具现状（2026年）：
 - 2026 年 AI 编程已进入 Agent 时代，AI 能自主完成 Plan → Code → Review → Deploy 全流程
-- 主流工具包括 Trae Solo（字节）、Codex（OpenAI）、Cursor 等
-- 字节内部已全面推行 AI 辅助编程，面试官看重候选人是否将 AI 嵌入日常工作流
+- 主流工具包括 Trae、Codex、Cursor 等
+- 头部互联网公司已全面推行 AI 辅助工作流，面试官看重候选人是否将 AI 嵌入日常工作
 - AI 协同分两层：Chat 层面（问答式）vs Workflow 层面（AI 自主完成完整任务链路），后者才是面试官想看到的
 
 你的风格：直接告诉候选人什么该做、什么不该做。
@@ -40,7 +40,7 @@ AI 编程工具现状（2026年5月）：
 def generate_plan(
     resume_text: str = "",
     jd_text: str = "",
-    target_role: str = "产品经理",
+    target_role: str = "",
     school: str = "",
     major: str = "",
     grade: str = "大三",
@@ -89,7 +89,7 @@ def generate_plan(
 【基本信息】
 学校：{school or '未提供'}
 专业：{major or '未提供'}
-意向岗位：{target_role}
+意向岗位：{target_role or '未指定'}
 当前年级：{grade}
 
 【当前能力评估】（1-10 分）
@@ -143,7 +143,7 @@ def generate_plan(
   "milestones": [
     {{"time": "第7天", "milestone": "里程碑", "check": "验收标准"}}
   ],
-  "role_specific_advice": "针对 {target_role} 的特殊建议"
+  "role_specific_advice": "针对目标岗位的特殊建议"
 }}
 ```
 
@@ -156,7 +156,7 @@ def generate_plan(
 
     result = safeCallLlm(prompt, SYSTEM_PROMPT, output_format="json")
 
-    if isinstance(result, dict) and "_trait" not in result:
+    if isinstance(result, dict) and "_trait" not in result and not result.get("error") and not result.get("_error"):
         result["markdown"] = _render_markdown(result)
 
     return result

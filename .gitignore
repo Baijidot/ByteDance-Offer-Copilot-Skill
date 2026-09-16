@@ -8,3 +8,6 @@ logs/
 *.backup/
 *.zip
 CONTEST.md
+.venv/
+outputs/
+参赛帖.md

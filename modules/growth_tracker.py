@@ -90,7 +90,7 @@ def record_session(
     return user
 
 
-def get_growth_report(user_id: str) -> dict:
+def get_growth_report(user_id: str = "default_user") -> dict:
     """
     Generate a growth report for a user.
 
@@ -117,7 +117,7 @@ def get_growth_report(user_id: str) -> dict:
         return {
             "user_id": user_id,
             "error": "No data found for this user",
-            "markdown": "> ⚠️ 暂无成长数据。开始使用 ByteDance Offer Copilot 以建立你的成长档案。",
+            "markdown": "> ⚠️ 暂无成长数据。开始使用 Offer Copilot 以建立你的成长档案。",
         }
 
     # Calculate metrics
@@ -202,6 +202,13 @@ def _extract_summary(session_type: str, data: dict) -> str:
         return f"Interview score: {score}/10"
     elif session_type == "growth_plan":
         return f"Growth plan: {data.get('recommended_route', 'Unknown')}"
+    elif session_type == "self_intro":
+        return f"Self-intro drafted ({data.get('params', {}).get('duration', '?')}s)"
+    elif session_type == "project_pitch":
+        return f"Project pitch: {data.get('project_name', '')}"
+    elif session_type == "offer_compare":
+        ranking = data.get("ranking", [])
+        return f"Offer compare: {ranking[0].get('company', '')} ranked #1" if ranking else "Offer compare"
     return session_type
 
 
@@ -314,7 +321,7 @@ def save_interview_session(
     pressure_sequence: list = None,
     evaluation: dict = None,
     mode: str = "高压",
-    target_role: str = "产品经理",
+    target_role: str = "",
 ) -> dict:
     """Save a complete interview session to disk."""
     session_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "user_data")

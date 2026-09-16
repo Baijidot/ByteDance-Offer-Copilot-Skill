@@ -14,7 +14,7 @@ from utils import callLlm, safeCallLlm
 from typing import Optional
 
 
-SYSTEM_PROMPT = """你是字节跳动的资深面试官，你的核心能力是发现候选人回答中的矛盾。
+SYSTEM_PROMPT = """你是互联网大厂的资深面试官，你的核心能力是发现候选人回答中的矛盾。
 
 你的方法：
 - 记住候选人之前说的每一句话

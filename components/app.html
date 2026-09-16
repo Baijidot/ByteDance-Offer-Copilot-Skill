@@ -1,0 +1,1574 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offer Copilot — AI 求职全流程教练</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>__CSS__</style>
+</head>
+<body>
+    <datalist id="roleList">
+        <option value="后端开发"></option>
+        <option value="前端开发"></option>
+        <option value="客户端开发"></option>
+        <option value="算法工程师"></option>
+        <option value="测试开发"></option>
+        <option value="数据分析"></option>
+        <option value="数据开发"></option>
+        <option value="产品经理"></option>
+        <option value="运营"></option>
+        <option value="市场营销"></option>
+        <option value="UI/UX设计"></option>
+        <option value="游戏策划"></option>
+    </datalist>
+
+    <div class="shell">
+        <!-- ═══════════ Sidebar ═══════════ -->
+        <aside class="sidebar">
+            <div class="brand"><span>🎯</span> Offer Copilot <span class="brand-ver">v3.2</span></div>
+
+            <div class="profile-chip empty" id="profileChip" onclick="go('resume')">
+                <div class="ring low" id="chipRing" style="--p:0"><span>0</span></div>
+                <div>
+                    <div class="pc-name">未导入简历</div>
+                    <div class="pc-role">点这里开始</div>
+                </div>
+            </div>
+
+            <nav class="side-nav" id="sideNav">
+                <div class="nav-group">求职闭环</div>
+                <button class="nav-item" data-page="dashboard">🏠 工作台</button>
+                <button class="nav-item" data-page="resume">📄 我的简历</button>
+                <button class="nav-item" data-page="jds">🎯 岗位库 <span class="nav-badge" id="jdCount"></span></button>
+                <button class="nav-item" data-page="tracker">📋 投递看板 <span class="nav-badge" id="appCount"></span></button>
+                <div class="nav-group">面试</div>
+                <button class="nav-item" data-page="prep">🎙️ 面试准备</button>
+                <button class="nav-item" data-page="interview">🎤 模拟面试</button>
+                <button class="nav-item" data-page="offers">⚖️ Offer 对比</button>
+                <div class="nav-group">更多</div>
+                <button class="nav-item" data-page="tools">🧰 工具箱</button>
+            </nav>
+
+            <div class="sidebar-foot">
+                <div class="ai-chip" id="aiChip" onclick="openSettings()">
+                    <span class="ai-dot"></span>
+                    <span id="aiChipText">AI 未配置</span>
+                </div>
+                <div class="sf-row">
+                    <a href="https://github.com/Baijidot/ByteDance-Offer-Copilot-Skill" target="_blank">GitHub</a>
+                    <span>·</span>
+                    <span>数据只存本地</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ═══════════ Main ═══════════ -->
+        <main class="main">
+
+        <!-- ─────────── Onboarding ─────────── -->
+        <section class="page" id="page-onboarding">
+            <div class="onboard">
+                <div class="page-head">
+                    <div>
+                        <h1>第一步：把简历给我</h1>
+                        <p>粘贴简历全文或上传文件。没有这份简历，后面的匹配、预测、模拟面试都无从谈起。</p>
+                    </div>
+                </div>
+
+                <div class="steps">
+                    <div class="step active" id="obStep1"><span class="step-n">1</span> 导入简历</div>
+                    <div class="step" id="obStep2"><span class="step-n">2</span> 确认档案</div>
+                    <div class="step" id="obStep3"><span class="step-n">3</span> 进入工作台</div>
+                </div>
+
+                <div class="card" id="obStep1Card">
+                    <label class="dropzone" id="obDropzone">
+                        <span>📎</span>
+                        <span>点击选择文件，或把文件拖到这里 · 支持 PDF / Word / TXT / Markdown</span>
+                        <input type="file" id="obFile" accept=".pdf,.docx,.txt,.md">
+                    </label>
+                    <div class="form-group" style="margin-top:12px">
+                        <textarea class="form-textarea" id="obResumeText" rows="12" placeholder="或者直接把简历全文粘贴到这里……&#10;&#10;包含教育背景、项目经历、实习经历、专业技能即可，格式不限"></textarea>
+                    </div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap">
+                        <button class="btn btn-primary btn-lg" onclick="obParse(event)">🔍 解析简历</button>
+                    </div>
+                    <p class="hint">解析在本地规则引擎完成，不上传、不需要 API Key，数据只存在你自己电脑的 user_data/ 目录。</p>
+                </div>
+
+                <div class="card" id="obStep2Card" style="display:none"></div>
+            </div>
+        </section>
+
+        <!-- ─────────── Dashboard ─────────── -->
+        <section class="page" id="page-dashboard">
+            <div class="page-head">
+                <div><h1>工作台</h1><p>你的求职漏斗今天长这样。</p></div>
+                <div class="head-actions">
+                    <button class="btn btn-secondary" onclick="go('jds')">➕ 添加 JD</button>
+                    <button class="btn btn-secondary" onclick="go('tracker')">📋 看板</button>
+                </div>
+            </div>
+            <div class="dash-grid" id="dashGrid"></div>
+            <div class="grid-main-side">
+                <div class="card">
+                    <h3>🎯 下一步做什么</h3>
+                    <ul class="next-list" id="dashNext"></ul>
+                </div>
+                <div class="card">
+                    <h3>📌 岗位库 TOP</h3>
+                    <div id="dashJds"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─────────── Resume ─────────── -->
+        <section class="page" id="page-resume">
+            <div class="page-head">
+                <div><h1>我的简历</h1><p>所有功能都从这里取数。改完记得保存——保存后自动重算岗位库匹配分。</p></div>
+                <div class="head-actions">
+                    <button class="btn btn-primary" onclick="rpSave(event)">💾 保存修改</button>
+                    <button class="btn btn-secondary" onclick="rpCheck(event)">🫧 黑话检测</button>
+                    <button class="btn btn-secondary" onclick="rpExport('pdf', event)">📄 导出 PDF</button>
+                    <button class="btn btn-secondary" onclick="rpExport('docx', event)">📝 导出 Word</button>
+                </div>
+            </div>
+            <div id="rpEditor"></div>
+            <div class="card" style="margin-top:16px">
+                <h3>🔧 对档案做深度检查</h3>
+                <p class="card-sub">选一个项目，让面试官视角挑毛病。规则层（黑话检测）不需要 API Key；AI 功能需要配置。</p>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                    <select id="rpProjectPick" class="form-select" style="max-width:320px"></select>
+                    <button class="btn btn-primary" onclick="rpRewrite(event)">🔥 AI 重构这个项目</button>
+                    <button class="btn btn-secondary" onclick="rpAuthenticity(event)">🔍 真实性检测</button>
+                    <button class="btn btn-secondary" onclick="rpPersona(event)">🧬 人格画像</button>
+                </div>
+            </div>
+            <div class="result-panel" id="rpResult" style="display:none">
+                <div class="markdown-content" id="rpContent"></div>
+                <div id="rpDownload"></div>
+            </div>
+        </section>
+
+        <!-- ─────────── JD library ─────────── -->
+        <section class="page" id="page-jds">
+            <div class="page-head">
+                <div><h1>岗位库 · 匹配分</h1><p>JD 存进来不会丢。每条挂一个匹配分：命中了什么、缺什么、有没有硬门槛。</p></div>
+            </div>
+
+            <div class="card">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">岗位名称（可选，自动识别）</label>
+                        <input class="form-input" id="jdTitle" placeholder="例如：后端开发工程师">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">公司（可选）</label>
+                        <input class="form-input" id="jdCompany" placeholder="例如：某内容社区">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">JD 全文</label>
+                    <textarea class="form-textarea" id="jdText" rows="8" placeholder="从招聘网站复制岗位描述，整段粘进来。保存后立刻出匹配分（规则引擎，不需要 API Key）。"></textarea>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <button class="btn btn-primary btn-lg" onclick="jdAdd(event)">🎯 保存并算匹配分</button>
+                </div>
+            </div>
+
+            <div style="margin-top:16px" id="jdListWrap"></div>
+
+            <div class="result-panel" id="jdDetailPanel" style="display:none">
+                <div class="grid-main-side">
+                    <div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+                            <h3 id="jdDetailTitle" style="margin:0"></h3>
+                            <span id="jdDetailBadgeWrap"></span>
+                        </div>
+                        <div id="jdMatchChips" style="margin:8px 0"></div>
+                        <div class="jd-text" id="jdDetailText"></div>
+                    </div>
+                    <div>
+                        <div class="markdown-content" id="jdDetailMatch"></div>
+                        <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
+                            <button class="btn btn-primary" onclick="jdDeep(event)">🤖 深度分析（AI 概率预测）</button>
+                            <button class="btn btn-secondary" onclick="jdToTracker()">📋 记为已投递</button>
+                            <button class="btn btn-secondary" onclick="jdToPitch()">🎙️ 用这个 JD 生成项目讲稿</button>
+                            <button class="btn btn-secondary" onclick="jdToInterview()">🎤 用这个 JD 模拟面试</button>
+                            <button class="btn btn-danger" onclick="jdDel()">🗑️ 删除</button>
+                        </div>
+                        <div class="markdown-content" id="jdDeepResult" style="margin-top:12px"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─────────── Tracker ─────────── -->
+        <section class="page" id="page-tracker">
+            <div class="page-head">
+                <div><h1>投递看板</h1><p>卡片可以直接拖到下一列。不记录，就永远不知道自己卡在哪一层。</p></div>
+            </div>
+            <div class="card">
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">来自岗位库</label><select class="form-select" id="appJdPick" onchange="appJdPickChange()"><option value="">— 手动填写 —</option></select></div>
+                    <div class="form-group"><label class="form-label">公司 *</label><input class="form-input" id="appCompany" placeholder="腾讯"></div>
+                    <div class="form-group"><label class="form-label">岗位 *</label><input class="form-input" id="appPosition" placeholder="后端开发" list="roleList"></div>
+                    <div class="form-group"><label class="form-label">渠道</label>
+                        <select class="form-select" id="appChannel"><option>官网</option><option>内推</option><option>BOSS直聘</option><option>牛客</option><option>实习僧</option><option>猎头</option><option>校招宣讲</option><option>其他</option></select>
+                    </div>
+                    <div class="form-group"><label class="form-label">城市</label><input class="form-input" id="appCity" placeholder="深圳"></div>
+                    <div class="form-group"><label class="form-label">投递日期</label><input type="date" class="form-input" id="appDate"></div>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <button class="btn btn-primary" onclick="addApp(event)">➕ 记录这笔投递</button>
+                </div>
+            </div>
+            <div style="margin-top:16px" id="trackerStats"></div>
+            <div id="trackerKanban"></div>
+            <div class="markdown-content" id="trackerActions" style="margin-top:8px"></div>
+        </section>
+
+        <!-- ─────────── Prep ─────────── -->
+        <section class="page" id="page-prep">
+            <div class="page-head">
+                <div><h1>面试准备</h1><p>先有稿子，再去被拷打。简历自动取自档案。</p></div>
+                <span class="chip ok" id="prepProfileBadge">✓ 使用我的简历档案</span>
+            </div>
+            <div class="sub-tabs">
+                <button class="sub-tab active" id="subTabIntro" onclick="switchSub('intro', this)">🎙️ 自我介绍</button>
+                <button class="sub-tab" id="subTabPitch" onclick="switchSub('pitch', this)">🎯 项目讲稿</button>
+            </div>
+
+            <div class="card" id="subIntro">
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">时长</label>
+                        <select class="form-select" id="introDuration"><option value="30">30 秒</option><option value="60" selected>60 秒</option><option value="180">3 分钟</option></select></div>
+                    <div class="form-group"><label class="form-label">风格</label>
+                        <select class="form-select" id="introStyle"><option>结构化</option><option>讲故事</option><option>数据流</option></select></div>
+                    <div class="form-group"><label class="form-label">针对岗位库的 JD（可选）</label>
+                        <select class="form-select" id="introJdPick"><option value="">— 不指定 —</option></select></div>
+                </div>
+                <div class="form-group"><label class="form-label">目标岗位（默认取档案）</label>
+                    <input class="form-input" id="introRole" placeholder="留空 = 档案里的目标岗位"></div>
+                <button class="btn btn-primary btn-lg" onclick="genIntro(event)">🎙️ 生成自我介绍</button>
+            </div>
+
+            <div class="card" id="subPitch" style="display:none">
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">选择档案里的项目</label>
+                        <select class="form-select" id="pitchPick" onchange="pitchPickChange()"><option value="">— 手动粘贴 —</option></select></div>
+                    <div class="form-group"><label class="form-label">版本</label>
+                        <select class="form-select" id="pitchDepth"><option value="1min">1 分钟版</option><option value="3min" selected>3 分钟版</option><option value="deep">深挖版</option></select></div>
+                    <div class="form-group"><label class="form-label">针对岗位库的 JD（可选）</label>
+                        <select class="form-select" id="pitchJdPick"><option value="">— 不指定 —</option></select></div>
+                </div>
+                <div class="form-group"><label class="form-label">项目描述（选中档案项目后自动填入，可改）</label>
+                    <textarea class="form-textarea" id="pitchText" rows="6" placeholder="粘贴项目描述原文……"></textarea></div>
+                <button class="btn btn-primary btn-lg" onclick="genPitch(event)">🎯 生成项目讲稿</button>
+            </div>
+
+            <div class="result-panel" id="introResult" style="display:none">
+                <div class="markdown-content" id="introContent"></div>
+            </div>
+        </section>
+
+        <!-- ─────────── Interview ─────────── -->
+        <section class="page" id="page-interview">
+            <div class="page-head">
+                <div><h1>模拟面试</h1><p>四种模式，带压力值与矛盾检测。岗位默认取档案，JD 可从岗位库选。</p></div>
+            </div>
+            <div class="card">
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">模式</label>
+                        <select class="form-select" id="interviewMode"><option>温和</option><option selected>高压</option><option>地狱</option><option>暖心</option></select></div>
+                    <div class="form-group"><label class="form-label">岗位（默认取档案）</label>
+                        <input class="form-input" id="interviewRole" placeholder="留空 = 档案里的目标岗位"></div>
+                    <div class="form-group"><label class="form-label">JD（可选）</label>
+                        <select class="form-select" id="interviewJdPick"><option value="">— 不指定 —</option></select></div>
+                    <div class="form-group" style="display:flex;align-items:flex-end">
+                        <button class="btn btn-primary" id="startInterviewBtn" onclick="startInterview(event)">🎤 开始面试</button>
+                        <button class="btn btn-danger" id="endInterviewBtn" style="display:none;margin-left:8px" onclick="endInterview()">结束并评估</button>
+                    </div>
+                </div>
+            </div>
+            <div class="chat-container" style="margin-top:16px;display:none" id="chatContainer">
+                <div class="chat-header">
+                    <div style="display:flex;align-items:center;gap:10px"><span class="emoji-icon">👨‍💼</span><span style="font-weight:600">资深面试官</span></div>
+                    <span class="chat-mode-badge hard" id="chatModeBadge">高压</span>
+                </div>
+                <div class="chat-messages" id="chatMessages"></div>
+                <div class="chat-input-area">
+                    <input type="text" class="chat-input" id="chatInput" placeholder="输入你的回答..." onkeydown="if(event.key==='Enter')sendAnswer()">
+                    <button class="btn btn-primary" onclick="sendAnswer()">发送</button>
+                </div>
+            </div>
+            <div class="result-panel" id="interviewResult" style="display:none">
+                <h2>📋 面试评估报告</h2>
+                <div id="interviewScoreDisplay" style="text-align:center;margin-bottom:24px"></div>
+                <div id="interviewDimensions" class="dimension-list" style="margin-bottom:24px"></div>
+                <div id="interviewFeedback"></div>
+            </div>
+        </section>
+
+        <!-- ─────────── Offers ─────────── -->
+        <section class="page" id="page-offers">
+            <div class="page-head">
+                <div><h1>Offer 对比</h1><p>六维加权（规则层）+ 面试官视角（AI）。拿到多个 Offer 靠感觉选，是最常见的失误。</p></div>
+                <div class="head-actions">
+                    <button class="btn btn-secondary" onclick="offersFromTracker(event)">📥 从看板导入 Offer</button>
+                </div>
+            </div>
+            <div class="card">
+                <h3>🎯 你的权重（总和不要求 100）</h3>
+                <div class="weight-grid">
+                    <div class="slider-row"><span>薪酬包</span><input type="range" min="0" max="50" value="30" id="w_salary" oninput="document.getElementById('w_salary_v').textContent=this.value"><span class="sr-val" id="w_salary_v">30</span></div>
+                    <div class="slider-row"><span>职业成长</span><input type="range" min="0" max="50" value="25" id="w_growth" oninput="document.getElementById('w_growth_v').textContent=this.value"><span class="sr-val" id="w_growth_v">25</span></div>
+                    <div class="slider-row"><span>平台稳定性</span><input type="range" min="0" max="50" value="15" id="w_stability" oninput="document.getElementById('w_stability_v').textContent=this.value"><span class="sr-val" id="w_stability_v">15</span></div>
+                    <div class="slider-row"><span>团队氛围</span><input type="range" min="0" max="50" value="15" id="w_team" oninput="document.getElementById('w_team_v').textContent=this.value"><span class="sr-val" id="w_team_v">15</span></div>
+                    <div class="slider-row"><span>城市通勤</span><input type="range" min="0" max="50" value="10" id="w_location" oninput="document.getElementById('w_location_v').textContent=this.value"><span class="sr-val" id="w_location_v">10</span></div>
+                    <div class="slider-row"><span>赛道前景</span><input type="range" min="0" max="50" value="5" id="w_track" oninput="document.getElementById('w_track_v').textContent=this.value"><span class="sr-val" id="w_track_v">5</span></div>
+                </div>
+                <div class="hint">把「薪酬包」拉到 0 看看排名变不变——变了就说明你其实更在乎别的。</div>
+                <h3>📦 Offer 列表</h3>
+                <div class="offer-grid" id="offerGrid"></div>
+                <button class="btn btn-secondary" onclick="addOfferCard()">➕ 添加 Offer</button>
+                <div class="form-group" style="margin-top:16px">
+                    <label class="form-label">你现阶段最看重什么？（可选）</label>
+                    <textarea class="form-textarea" id="offerPriorities" rows="2" placeholder="例如：三年内想快速成长，可以接受加班，但不想去边缘业务..."></textarea>
+                </div>
+                <button class="btn btn-primary btn-lg" onclick="compareMyOffers(event)">⚖️ 开始对比</button>
+            </div>
+            <div class="result-panel" id="offersResult" style="display:none">
+                <div id="offerRanking" class="rank-list"></div>
+                <div class="markdown-content" id="offersContent"></div>
+            </div>
+        </section>
+
+        <!-- ─────────── Tools ─────────── -->
+        <section class="page" id="page-tools">
+            <div class="page-head">
+                <div><h1>工具箱</h1><p>方向诊断、成长路线、群面、黑话翻译……多数已从档案预填。</p></div>
+            </div>
+            <div class="tool-grid">
+                <div class="tool-card" data-tool="confusion"><div class="tc-title">🧭 求职迷茫诊断</div><div class="tc-desc">4 道题 → 优先级行动清单</div></div>
+                <div class="tool-card" data-tool="career"><div class="tc-title">🎯 岗位方向匹配</div><div class="tc-desc">用你的档案推荐 TOP 3 方向</div></div>
+                <div class="tool-card" data-tool="growth"><div class="tc-title">🗺️ 成长路线</div><div class="tc-desc">30 天冲刺计划</div></div>
+                <div class="tool-card" data-tool="trajectory"><div class="tc-title">📈 成长轨迹</div><div class="tc-desc">历史记录 + Offer 概率趋势</div></div>
+                <div class="tool-card" data-tool="group"><div class="tc-title">👥 群面模拟</div><div class="tc-desc">无领导小组讨论</div></div>
+                <div class="tool-card" data-tool="translate"><div class="tc-title">🌐 黑话翻译</div><div class="tc-desc">学生腔 → 互联网表达</div></div>
+            </div>
+            <div id="toolPanels" style="margin-top:16px"></div>
+        </section>
+
+        </main>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <!-- AI 设置弹窗 -->
+    <div class="modal-backdrop" id="settingsModal" style="display:none">
+        <div class="modal">
+            <h2>⚙️ AI 设置</h2>
+            <p class="modal-sub">填入任意 OpenAI 兼容接口的 API Key，AI 功能（JD 深度分析、自我介绍、模拟面试、Offer 定性分析等）即可使用。Key 只保存在本地 user_data/settings.json。</p>
+            <div class="presets">
+                <button class="preset-btn" onclick="presetProvider('glm')">智谱 GLM</button>
+                <button class="preset-btn" onclick="presetProvider('kimi')">Kimi</button>
+                <button class="preset-btn" onclick="presetProvider('deepseek')">DeepSeek</button>
+                <button class="preset-btn" onclick="presetProvider('openai')">OpenAI</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label">API Key <span id="keyStatus" style="font-weight:400;color:var(--text-muted)"></span></label>
+                <input class="form-input" id="setApiKey" type="password" placeholder="sk-...（留空 = 保持现有 Key）" autocomplete="off">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Base URL</label>
+                    <input class="form-input" id="setBaseUrl" placeholder="https://open.bigmodel.cn/api/paas/v4">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">模型</label>
+                    <input class="form-input" id="setModel" placeholder="glm-4.6">
+                </div>
+            </div>
+            <div class="test-result" id="testResult"></div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="testSettings(event)">🔌 测试连接</button>
+                <button class="btn btn-secondary" onclick="closeSettings()">关闭</button>
+                <button class="btn btn-primary" onclick="saveSettings(event)">💾 保存</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+// ═══════════════ helpers ═══════════════
+function escapeHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    clearTimeout(t._timer); t._timer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+function setBusy(btn, busy, text) {
+    if (!btn) return;
+    if (busy) { btn.dataset.orig = btn.textContent; btn.disabled = true;
+        btn.innerHTML = '<span class="loading-spinner" style="width:14px;height:14px;border-width:2px"></span> ' + (text || '处理中...'); }
+    else { btn.disabled = false; if (btn.dataset.orig) btn.textContent = btn.dataset.orig; }
+}
+async function postForm(url, data) {
+    const fd = new FormData();
+    for (const [k, v] of Object.entries(data)) fd.append(k, v);
+    const resp = await fetch(url, { method: 'POST', body: fd });
+    return resp.json();
+}
+async function postJson(url, data) {
+    const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+    return resp.json();
+}
+function mdToHtml(text) {
+    const inline = s => escapeHtml(s)
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>')
+        .replace(/`([^`]+)`/g, '<code>$1</code>');
+    const lines = String(text).split('\n');
+    const out = []; let inTable = false, inList = false;
+    const closeList = () => { if (inList) { out.push('</ul>'); inList = false; } };
+    for (let raw of lines) {
+        const t = raw.trim();
+        if (/^\|.+\|$/.test(t)) {
+            closeList();
+            if (!inTable) { out.push('<div class="table-wrap"><table>'); inTable = true; }
+            const cells = t.slice(1, -1).split('|');
+            if (cells.every(c => /^[\s:-]+$/.test(c))) continue;
+            out.push('<tr>' + cells.map(c => '<td>' + inline(c.trim()) + '</td>').join('') + '</tr>');
+            continue;
+        } else if (inTable) { out.push('</table></div>'); inTable = false; }
+        if (/^###\s/.test(t)) { closeList(); out.push('<h3>' + inline(t.slice(4)) + '</h3>'); }
+        else if (/^##\s/.test(t)) { closeList(); out.push('<h2>' + inline(t.slice(3)) + '</h2>'); }
+        else if (/^#\s/.test(t)) { closeList(); out.push('<h1>' + inline(t.slice(2)) + '</h1>'); }
+        else if (/^>\s?/.test(t)) { closeList(); out.push('<blockquote>' + inline(t.replace(/^>\s?/, '')) + '</blockquote>'); }
+        else if (/^[-*]\s+/.test(t)) {
+            if (!inList) { out.push('<ul>'); inList = true; }
+            out.push('<li>' + inline(t.replace(/^[-*]\s+/, '')) + '</li>');
+        }
+        else if (/^-{3,}$/.test(t)) { closeList(); out.push('<hr>'); }
+        else if (t === '') { closeList(); }
+        else { closeList(); out.push('<p>' + inline(t) + '</p>'); }
+    }
+    if (inTable) out.push('</table></div>');
+    closeList();
+    return out.join('\n');
+}
+function renderMarkdown(elId, mdOrObj) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    if (typeof mdOrObj === 'string') { el.innerHTML = mdToHtml(mdOrObj); return; }
+    if (mdOrObj && typeof mdOrObj === 'object') {
+        if (mdOrObj.markdown) { el.innerHTML = mdToHtml(mdOrObj.markdown); return; }
+        if (mdOrObj._trait === 'llm_call') {
+            el.innerHTML = '<div class="alert alert-warning">⚠️ 这个功能需要 AI。<a href="javascript:void(0)" onclick="openSettings()" style="font-weight:600">去配置 API Key →</a>&nbsp; 支持智谱 GLM / Kimi / DeepSeek / OpenAI 等任何 OpenAI 兼容接口。</div>'; return; }
+        if (mdOrObj.error === 'NO_PROFILE') { el.innerHTML = '<div class="alert alert-danger">⚠️ 先导入简历，这里才会解锁</div>'; return; }
+        if (mdOrObj.error === 'LLM未配置' || (mdOrObj._error === 'LLM未配置')) {
+            el.innerHTML = '<div class="alert alert-warning">⚠️ 还没有配置 AI。<a href="javascript:void(0)" onclick="openSettings()" style="font-weight:600">去配置 API Key →</a></div>'; return; }
+        if (mdOrObj.error || mdOrObj._error) {
+            el.innerHTML = '<div class="alert alert-danger">⚠️ ' + escapeHtml(mdOrObj._retry_hint || mdOrObj.error || mdOrObj._error) + ' <a href="javascript:void(0)" onclick="openSettings()" style="font-weight:600">检查 AI 设置 →</a></div>'; return; }
+        el.innerHTML = '<pre style="white-space:pre-wrap;font-size:12px">' + escapeHtml(JSON.stringify(mdOrObj, null, 2)) + '</pre>';
+        return;
+    }
+    el.innerHTML = '<div class="alert alert-warning">⚠️ 没有返回内容</div>';
+}
+function showResult(id) { const el = document.getElementById(id); el.classList.add('visible'); el.style.display = 'block'; }
+function scrollDown(id) { document.getElementById(id).scrollIntoView({ behavior: 'smooth' }); }
+function ringHtml(score) {
+    const cls = score >= 80 ? 'high' : score >= 50 ? 'mid' : 'low';
+    return '<div class="ring lg ' + cls + '" style="--p:' + score + '"><span>' + score + '</span></div>';
+}
+function scoreBadge(score) {
+    if (score === null || score === undefined) return '<span class="score-badge">—</span>';
+    const cls = score >= 75 ? 'high' : score >= 50 ? 'mid' : 'low';
+    return '<span class="score-badge ' + cls + '">' + score + '</span>';
+}
+
+// ═══════════════ state & boot ═══════════════
+const state = { profile: null, jds: [], selectedJd: null, hasProfile: false };
+
+async function boot() {
+    refreshAiChip();
+    const r = await fetch('/api/profile').then(x => x.json());
+    state.hasProfile = !!(r.profile && r.profile.raw_text);
+    if (state.hasProfile) state.profile = r.profile;
+    refreshChip();
+    await Promise.all([loadJds(), loadTrackerCounts()]);
+    go(state.hasProfile ? 'dashboard' : 'onboarding');
+}
+
+function refreshChip() {
+    const chip = document.getElementById('profileChip');
+    const ring = document.getElementById('chipRing');
+    if (state.hasProfile) {
+        chip.classList.remove('empty');
+        const c = state.profile.completeness || { score: 0 };
+        ring.style.setProperty('--p', c.score);
+        ring.className = 'ring ' + (c.level || 'low');
+        ring.innerHTML = '<span>' + c.score + '</span>';
+        chip.querySelector('.pc-name').textContent = (state.profile.name || '我') + ' · ' + (state.profile.target_role || '未定岗位');
+        chip.querySelector('.pc-role').textContent = (state.profile.job_type || '') + ' · 档案完整度 ' + c.score + '%';
+    } else {
+        chip.classList.add('empty');
+        ring.style.setProperty('--p', 0); ring.className = 'ring low'; ring.innerHTML = '<span>0</span>';
+        chip.querySelector('.pc-name').textContent = '未导入简历';
+        chip.querySelector('.pc-role').textContent = '点这里开始';
+    }
+    document.querySelectorAll('.nav-item').forEach(item => {
+        const page = item.dataset.page;
+        const gate = page !== 'onboarding' && page !== 'resume';
+        const locked = gate && !state.hasProfile;
+        item.classList.toggle('locked', locked);
+        if (locked && !item.querySelector('.nav-lock')) item.insertAdjacentHTML('beforeend', '<span class="nav-lock">🔒</span>');
+        if (!locked) { const l = item.querySelector('.nav-lock'); if (l) l.remove(); }
+    });
+}
+
+function go(page) {
+    const gate = page !== 'onboarding' && page !== 'resume';
+    if (gate && !state.hasProfile) {
+        toast('🔒 先导入简历，这里才会解锁');
+        page = 'onboarding';
+    }
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.toggle('active', i.dataset.page === page));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    const el = document.getElementById('page-' + page);
+    if (el) el.classList.add('active');
+    window.scrollTo({ top: 0 });
+    if (page === 'dashboard') loadDashboard();
+    if (page === 'resume') renderProfileEditor('rp', state.profile || emptyProfile());
+    if (page === 'jds') renderJdList();
+    if (page === 'tracker') loadTracker();
+    if (page === 'prep') refreshPrepPickers();
+    if (page === 'offers' && !document.querySelector('.offer-card')) { addOfferCard(); addOfferCard(); }
+    if (page === 'tools') bindToolCards();
+}
+document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () => go(item.dataset.page));
+});
+
+// ═══════════════ profile editor ═══════════════
+function emptyProfile() {
+    return { name: '', target_role: '', job_type: '校招', target_cities: '',
+        education: { school: '', major: '', degree: '', graduation: '' },
+        skills: [], projects: [], experience: [], summary: '', raw_text: '' };
+}
+
+function renderProfileEditor(prefix, p) {
+    const host = document.getElementById(prefix + 'Editor');
+    const edu = p.education || {};
+    host.innerHTML = `
+    <div class="card">
+        <div class="grid-main-side">
+            <div>
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">姓名</label>
+                        <input class="form-input pe" data-f="name" value="${escapeHtml(p.name || '')}" placeholder="张三"></div>
+                    <div class="form-group"><label class="form-label">目标岗位 *</label>
+                        <input class="form-input pe" data-f="target_role" value="${escapeHtml(p.target_role || '')}" placeholder="后端开发 / 产品经理 / 数据分析..." list="roleList"></div>
+                    <div class="form-group"><label class="form-label">求职类型</label>
+                        <select class="form-select pe" data-f="job_type">
+                            ${['校招','社招','实习','转行'].map(t => `<option ${p.job_type === t ? 'selected' : ''}>${t}</option>`).join('')}
+                        </select></div>
+                    <div class="form-group"><label class="form-label">期望城市</label>
+                        <input class="form-input pe" data-f="target_cities" value="${escapeHtml(p.target_cities || '')}" placeholder="上海 / 深圳 / 不限"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">学校</label>
+                        <input class="form-input pe" data-f="edu.school" value="${escapeHtml(edu.school || '')}" placeholder="华中科技大学"></div>
+                    <div class="form-group"><label class="form-label">专业</label>
+                        <input class="form-input pe" data-f="edu.major" value="${escapeHtml(edu.major || '')}" placeholder="计算机科学与技术"></div>
+                    <div class="form-group"><label class="form-label">学历</label>
+                        <select class="form-select pe" data-f="edu.degree">
+                            ${['','大专','本科','硕士','博士'].map(d => `<option ${edu.degree === d ? 'selected' : ''}>${d}</option>`).join('')}
+                        </select></div>
+                    <div class="form-group"><label class="form-label">毕业年份</label>
+                        <input class="form-input pe" data-f="edu.graduation" value="${escapeHtml(edu.graduation || '')}" placeholder="2027"></div>
+                </div>
+                <div class="form-group"><label class="form-label">技能（顿号或逗号分隔）</label>
+                    <textarea class="form-textarea pe" data-f="skills" rows="2" placeholder="Go、MySQL、Redis、Docker...">${escapeHtml((p.skills || []).join('、'))}</textarea></div>
+                <div class="form-group"><label class="form-label">一句话自我概括</label>
+                    <input class="form-input pe" data-f="summary" value="${escapeHtml(p.summary || '')}" placeholder="做过 2400 用户校园平台的后端，正在冲大厂校招"></div>
+            </div>
+            <div style="text-align:center">
+                ${ringHtml((p.completeness || {}).score || 0)}
+                <div id="${prefix}Missing" style="font-size:12px;color:var(--text-muted);margin-top:8px;text-align:left"></div>
+            </div>
+        </div>
+    </div>
+    <div class="card" style="margin-top:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+            <h3 style="margin:0">🧱 项目经历 <span class="hint" style="display:inline">面试官至少会追问 2 个</span></h3>
+            <button class="btn btn-secondary" onclick="addListEditorItem('${prefix}Projects')">➕ 添加项目</button>
+        </div>
+        <div class="list-editor" id="${prefix}Projects"></div>
+    </div>
+    <div class="card" style="margin-top:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+            <h3 style="margin:0">💼 实习 / 工作经历</h3>
+            <button class="btn btn-secondary" onclick="addListEditorItem('${prefix}Exp')">➕ 添加经历</button>
+        </div>
+        <div class="list-editor" id="${prefix}Exp"></div>
+    </div>
+    <div class="card" style="margin-top:12px">
+        <details class="raw-toggle"><summary>简历原文（${(p.raw_text || '').length} 字 — 分析时优先使用）</summary>
+            <textarea class="form-textarea pe" data-f="raw_text" rows="10">${escapeHtml(p.raw_text || '')}</textarea>
+        </details>
+    </div>`;
+    renderListEditor(prefix + 'Projects', p.projects || [], '项目名', '做了什么、你的角色、数据结果（尽量有数字）');
+    renderListEditor(prefix + 'Exp', p.experience || [], '公司 · 岗位 · 时间', '做了什么、结果如何');
+    renderMissing(prefix, p);
+    host.querySelectorAll('.pe').forEach(inp => inp.addEventListener('change', () => {
+        renderMissing(prefix, collectProfileEditor(prefix));
+    }));
+}
+
+function renderMissing(prefix, p) {
+    const box = document.getElementById(prefix + 'Missing');
+    if (!box) return;
+    const raw = (p.raw_text || '').length >= 200;
+    const checks = [
+        [raw, '简历原文 ≥200 字'], [!!p.target_role, '目标岗位'], [!!(p.education || {}).school, '学校'],
+        [(p.projects || []).length >= 2, '两个以上项目'],
+        [(p.projects || []).some(x => /\d/.test(x.description || '')), '项目里的数字'],
+        [(p.skills || []).length >= 3, '技能清单'], [!!(p.experience || []).length, '实习/工作'],
+    ];
+    box.innerHTML = checks.filter(c => !c[0]).map(c => '<div>⬜ ' + c[1] + '</div>').join('') || '<div>✅ 齐了</div>';
+}
+
+function renderListEditor(id, items, namePh, descPh) {
+    const host = document.getElementById(id);
+    host.innerHTML = '';
+    items.forEach(it => {
+        const div = document.createElement('div');
+        div.className = 'le-item';
+        div.innerHTML = `<button class="le-remove" onclick="this.parentElement.remove()">✕</button>
+            <input class="form-input" data-le="name" value="${escapeHtml(it.name || it.title || '')}" placeholder="${namePh}">
+            <textarea class="form-textarea" data-le="description" placeholder="${descPh}">${escapeHtml(it.description || '')}</textarea>`;
+        host.appendChild(div);
+    });
+    if (!items.length) host.innerHTML = '<div class="empty-state">还没有内容，点右上角添加</div>';
+}
+function addListEditorItem(id) {
+    const host = document.getElementById(id);
+    if (host.querySelector('.empty-state')) host.innerHTML = '';
+    const div = document.createElement('div');
+    div.className = 'le-item';
+    div.innerHTML = `<button class="le-remove" onclick="this.parentElement.remove()">✕</button>
+        <input class="form-input" data-le="name" placeholder="">
+        <textarea class="form-textarea" data-le="description" placeholder=""></textarea>`;
+    host.appendChild(div);
+}
+function collectListEditor(id) {
+    const out = [];
+    document.getElementById(id).querySelectorAll('.le-item').forEach(item => {
+        const name = item.querySelector('[data-le=name]').value.trim();
+        const description = item.querySelector('[data-le=description]').value.trim();
+        if (name || description) out.push({ name: name, description: description });
+    });
+    return out;
+}
+function collectProfileEditor(prefix) {
+    const get = f => { const el = document.querySelector('#' + prefix + 'Editor [data-f="' + f + '"]'); return el ? el.value : ''; };
+    return {
+        name: get('name').trim(),
+        target_role: get('target_role').trim(),
+        job_type: get('job_type'),
+        target_cities: get('target_cities').trim(),
+        education: { school: get('edu.school').trim(), major: get('edu.major').trim(), degree: get('edu.degree'), graduation: get('edu.graduation').trim() },
+        skills: get('skills').split(/[、,，\n]/).map(s => s.trim()).filter(Boolean),
+        projects: collectListEditor(prefix + 'Projects').map(x => ({ name: x.name, description: x.description })),
+        experience: collectListEditor(prefix + 'Exp').map(x => ({ title: x.name, description: x.description })),
+        summary: get('summary').trim(),
+        raw_text: get('raw_text'),
+    };
+}
+
+// ═══════════════ onboarding ═══════════════
+
+async function obParse(ev) {
+    const btn = ev && ev.target;
+    const fileInput = document.getElementById('obFile');
+    setBusy(btn, true, '解析中...');
+    let r;
+    try {
+        if (fileInput.files && fileInput.files[0]) {
+            const fd = new FormData();
+            fd.append('file', fileInput.files[0]);
+            const resp = await fetch('/api/profile/parse', { method: 'POST', body: fd });
+            r = await resp.json();
+        } else {
+            r = await postJson('/api/profile/parse', { resume_text: document.getElementById('obResumeText').value });
+        }
+    } catch (e) { setBusy(btn, false); toast('请求失败：' + e.message); return; }
+    setBusy(btn, false);
+    if (!r.success) {
+        toast(r.error === 'TEXT_TOO_SHORT' ? '内容太短，不像一份简历' : (r.error === 'PDF_EXTRACT_FAILED' ? 'PDF 读不出文本（试试粘贴文本）' : '解析失败'));
+        if (r.markdown) alert(r.markdown.replace(/[#>]/g, '').trim());
+        return;
+    }
+    document.getElementById('obStep1Card').style.display = 'none';
+    const card2 = document.getElementById('obStep2Card');
+    card2.style.display = 'block';
+    document.getElementById('obStep1').classList.remove('active');
+    document.getElementById('obStep1').classList.add('done');
+    document.getElementById('obStep2').classList.add('active');
+    window._obProfile = r.profile;
+    card2.innerHTML = '<div id="obEditor"></div>';
+    renderProfileEditor('ob', r.profile);
+    card2.insertAdjacentHTML('beforeend',
+        '<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">' +
+        '<button class="btn btn-primary btn-lg" id="obSaveBtn" onclick="obSave(event)">✅ 确认，进入工作台</button>' +
+        '<button class="btn btn-secondary btn-lg" onclick="obBack()">← 重新导入</button></div>');
+    card2.scrollIntoView({ behavior: 'smooth' });
+}
+function obBack() {
+    const card2 = document.getElementById('obStep2Card');
+    card2.style.display = 'none';
+    card2.innerHTML = '';
+    document.getElementById('obStep1Card').style.display = 'block';
+    document.getElementById('obStep2').classList.remove('active');
+    document.getElementById('obStep1').classList.add('active');
+    document.getElementById('obStep1').classList.remove('done');
+}
+async function obSave(ev) {
+    const btn = ev && ev.target;
+    const profile = collectProfileEditor('ob');
+    if (!profile.target_role) { toast('目标岗位必填'); return; }
+    if (!profile.raw_text || profile.raw_text.trim().length < 30) {
+        profile.raw_text = (window._obProfile && window._obProfile.raw_text) || '';
+    }
+    setBusy(btn, true, '保存中...');
+    const r = await postJson('/api/profile/save', { profile: profile });
+    setBusy(btn, false);
+    if (!r.success) { toast(r.error === 'NO_RAW_TEXT' ? '简历原文不能为空' : '保存失败'); return; }
+    state.profile = r.profile; state.hasProfile = true;
+    document.getElementById('obStep2').classList.remove('active');
+    document.getElementById('obStep2').classList.add('done');
+    document.getElementById('obStep3').classList.add('active');
+    refreshChip(); refreshJdPickers();
+    toast('✅ 档案已建立，全部功能解锁');
+    go('dashboard');
+}
+
+// ═══════════════ 我的简历 ═══════════════
+async function rpSave(ev) {
+    const btn = ev && ev.target;
+    const profile = collectProfileEditor('rp');
+    if (!profile.target_role) { toast('目标岗位必填'); return; }
+    if (!profile.raw_text || profile.raw_text.trim().length < 30) { toast('简历原文不能为空（页面底部展开编辑）'); return; }
+    setBusy(btn, true, '保存中...');
+    const r = await postJson('/api/profile/save', { profile: profile });
+    setBusy(btn, false);
+    if (!r.success) { toast('保存失败'); return; }
+    state.profile = r.profile; state.hasProfile = true;
+    refreshChip(); refreshJdPickers(); loadJds(); loadTrackerCounts();
+    toast('✅ 已保存' + (r.rematched ? '，岗位库 ' + r.rematched + ' 条匹配分已重算' : ''));
+}
+async function rpCheck(ev) {
+    const btn = ev && ev.target;
+    const profile = collectProfileEditor('rp');
+    if (!profile.raw_text) { toast('简历原文是空的'); return; }
+    setBusy(btn, true, '检测中...');
+    const r = await postForm('/api/bs-detect', { text: profile.raw_text });
+    setBusy(btn, false);
+    renderMarkdown('rpContent', r);
+    showResult('rpResult'); scrollDown('rpResult');
+}
+function refreshProjectPick() {
+    const sel = document.getElementById('rpProjectPick');
+    const projects = (state.profile && state.profile.projects) || [];
+    sel.innerHTML = projects.length
+        ? projects.map((p, i) => '<option value="' + i + '">' + escapeHtml(p.name || ('项目 ' + (i + 1))) + '</option>').join('')
+        : '<option value="">（档案里还没有项目）</option>';
+}
+function rpProjectText() {
+    const idx = parseInt(document.getElementById('rpProjectPick').value);
+    if (!isNaN(idx) && state.profile && state.profile.projects[idx]) {
+        const x = state.profile.projects[idx];
+        return (x.name || '') + '\n' + (x.description || '');
+    }
+    return '';
+}
+async function rpRewrite(ev) {
+    const btn = ev && ev.target;
+    const text = rpProjectText();
+    if (!text) { toast('先在档案里加一个项目'); return; }
+    setBusy(btn, true, '重构中...');
+    const r = await postForm('/api/rewrite-project', { original_text: text });
+    setBusy(btn, false);
+    if (!r.success) return;
+    renderMarkdown('rpContent', r.bs_detection);
+    document.getElementById('rpContent').insertAdjacentHTML('beforeend', '<hr>');
+    if (r.rewrite && r.rewrite.markdown) document.getElementById('rpContent').insertAdjacentHTML('beforeend', mdToHtml(r.rewrite.markdown));
+    showResult('rpResult'); scrollDown('rpResult');
+}
+async function rpAuthenticity(ev) {
+    const btn = ev && ev.target;
+    const text = rpProjectText();
+    if (!text) { toast('先在档案里加一个项目'); return; }
+    setBusy(btn, true, '检测中...');
+    const r = await postForm('/api/authenticity', { text: text });
+    setBusy(btn, false);
+    renderMarkdown('rpContent', r);
+    showResult('rpResult'); scrollDown('rpResult');
+}
+async function rpPersona(ev) {
+    const btn = ev && ev.target;
+    setBusy(btn, true, '分析中...');
+    const r = await postForm('/api/persona', {});
+    setBusy(btn, false);
+    renderMarkdown('rpContent', r);
+    showResult('rpResult'); scrollDown('rpResult');
+}
+async function rpExport(format, ev) {
+    const btn = ev && ev.target;
+    setBusy(btn, true, '导出中...');
+    const r = await postForm('/api/profile/export', { format: format });
+    setBusy(btn, false);
+    if (!r.success) { toast('导出失败: ' + (r.error || '')); return; }
+    document.getElementById('rpDownload').innerHTML =
+        '<div class="alert alert-info">📄 已导出：<a href="/api/download-resume?path=' + encodeURIComponent(r.path) + '" target="_blank">点击下载 ' + r.path.split('/').pop() + '</a></div>';
+    showResult('rpResult');
+    toast('已导出 ' + format.toUpperCase());
+}
+
+// ═══════════════ dashboard ═══════════════
+async function loadDashboard() {
+    const r = await fetch('/api/dashboard').then(x => x.json());
+    if (!r.success) return;
+    const c = r.completeness || { score: 0 };
+    const s = r.stats || {};
+    const p = r.profile;
+    const maxCount = Math.max(...(s.funnel || [{count: 1}]).map(x => x.count), 1);
+    document.getElementById('dashGrid').innerHTML = `
+        <div class="card" style="cursor:pointer" onclick="go('resume')">
+            <h3>📄 简历档案</h3>
+            <div style="display:flex;gap:14px;align-items:center">
+                ${ringHtml(c.score)}
+                <div>
+                    <div style="font-weight:600">${escapeHtml((p && p.name) || '未命名')} · ${escapeHtml((p && p.target_role) || '未定岗位')}</div>
+                    <div class="hint">${escapeHtml((p && p.job_type) || '')} · ${((p && p.projects) || []).length} 项目 · ${((p && p.skills) || []).length} 技能</div>
+                    <div class="hint" style="color:var(--text-accent)">点击编辑 →</div>
+                </div>
+            </div>
+        </div>
+        <div class="card" style="cursor:pointer" onclick="go('tracker')">
+            <h3>📉 投递漏斗</h3>
+            ${(s.funnel || []).map(f => `
+                <div class="funnel-row"><span>${f.stage}</span>
+                    <div class="funnel-bar"><div class="funnel-fill" style="width:${(f.count / maxCount) * 100}%"></div></div>
+                    <span class="funnel-num">${f.count}</span></div>`).join('') || '<div class="empty-state">还没有投递记录</div>'}
+        </div>
+        <div class="card" style="cursor:pointer" onclick="go('tracker')">
+            <h3>📅 本周</h3>
+            <div class="stat-strip" style="grid-template-columns:1fr 1fr">
+                <div class="stat-box"><div class="sb-value">${(s.this_week || {}).added || 0}</div><div class="sb-label">新投递</div></div>
+                <div class="stat-box"><div class="sb-value">${(s.this_week || {}).interviews || 0}</div><div class="sb-label">面试</div></div>
+            </div>
+            ${((s.upcoming || []).slice(0, 2)).map(u => '<div class="hint">👉 ' + escapeHtml(u.company) + '：' + escapeHtml(u.next_action) + (u.date ? '（' + u.date + '）' : '') + '</div>').join('')}
+            <div class="hint" style="color:var(--text-accent);margin-top:6px">一面率 ${s.interview_rate || 0}% · Offer 率 ${s.offer_rate || 0}%</div>
+        </div>`;
+    document.getElementById('dashNext').innerHTML = (r.next_actions || []).map(a =>
+        '<li class="' + a.p + '" onclick="go(\'' + a.page + '\')" style="cursor:pointer">' + escapeHtml(a.text) + '</li>').join('');
+    document.getElementById('dashJds').innerHTML = (r.jds || []).map(j => {
+        const m = j.match || {};
+        const miss = ((m.hard || {}).missing || []).slice(0, 3).join('、');
+        return '<div class="jd-card" style="grid-template-columns:48px 1fr;margin-bottom:8px" onclick="openJd(\'' + j.id + '\')">' +
+            '<div>' + scoreBadge(m.score) + '</div><div><div class="jd-title">' + escapeHtml(j.title) + '</div>' +
+            '<div class="jd-company">' + escapeHtml(j.company || '-') + (miss ? ' · 缺：' + escapeHtml(miss) : '') + '</div></div></div>';
+    }).join('') || '<div class="empty-state">岗位库是空的，<b>粘一个 JD 进来</b></div>';
+}
+
+// ═══════════════ JD library ═══════════════
+async function loadJds() {
+    const r = await fetch('/api/jds').then(x => x.json());
+    state.jds = r.jds || [];
+    renderJdList();
+    refreshJdPickers();
+    loadTrackerCounts();
+}
+function renderJdList() {
+    const wrap = document.getElementById('jdListWrap');
+    if (!wrap) return;
+    if (!state.jds.length) {
+        wrap.innerHTML = '<div class="empty-state">岗位库是空的。粘 3 个目标 JD 进来，你会立刻看到自己在哪个上面胜率最高。</div>';
+        return;
+    }
+    wrap.innerHTML = state.jds.map(j => {
+        const m = j.match || {};
+        const miss = ((m.hard || {}).missing || []).slice(0, 4);
+        const flag = (m.flags || []).some(f => f.level === 'high') ? ' ⛔' : ((m.flags || []).length ? ' 🟡' : '');
+        return `<div class="jd-card ${state.selectedJd === j.id ? 'active' : ''}" onclick="openJd('${j.id}')">
+            <div>${scoreBadge(m.score)}</div>
+            <div>
+                <div class="jd-title">${escapeHtml(j.title)}${flag}</div>
+                <div class="jd-company">${escapeHtml(j.company || '-')} · ${escapeHtml(j.created_at || '')}</div>
+                <div class="chips">${miss.map(s => '<span class="chip miss">' + escapeHtml(s) + '</span>').join('') || '<span class="chip ok">硬技能全命中</span>'}</div>
+            </div>
+        </div>`;
+    }).join('');
+}
+function escapeRegExp(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+function highlightJd(text, match) {
+    let html = escapeHtml(text);
+    const matched = new Set(((match || {}).hard || {}).matched || []);
+    const missing = new Set(((match || {}).hard || {}).missing || []);
+    const words = [...matched, ...missing].sort((a, b) => b.length - a.length);
+    for (const w of words) {
+        const cls = matched.has(w) ? 'hit' : 'miss';
+        html = html.replace(new RegExp(escapeRegExp(w), 'gi'), m => '<mark class="kw ' + cls + '">' + m + '</mark>');
+    }
+    return html;
+}
+function openJd(id) {
+    const j = state.jds.find(x => x.id === id);
+    if (!j) return;
+    state.selectedJd = id;
+    renderJdList();
+    document.getElementById('jdDetailTitle').textContent = j.title + (j.company ? ' · ' + j.company : '');
+    document.getElementById('jdDetailBadgeWrap').innerHTML = scoreBadge((j.match || {}).score);
+    const m = j.match || {};
+    document.getElementById('jdMatchChips').innerHTML =
+        '<div class="chips">' +
+        ((m.hard || {}).matched || []).map(s => '<span class="chip ok">' + escapeHtml(s) + '</span>').join('') +
+        ((m.hard || {}).missing || []).map(s => '<span class="chip miss">' + escapeHtml(s) + '</span>').join('') + '</div>';
+    document.getElementById('jdDetailText').innerHTML = highlightJd(j.text || '', m);
+    renderMarkdown('jdDetailMatch', m.markdown || '');
+    renderMarkdown('jdDeepResult', (j.deep || {}).markdown || '');
+    const panel = document.getElementById('jdDetailPanel');
+    panel.style.display = 'block'; panel.classList.add('visible');
+    panel.scrollIntoView({ behavior: 'smooth' });
+}
+async function jdAdd(ev) {
+    const btn = ev && ev.target;
+    const text = document.getElementById('jdText').value;
+    if (text.trim().length < 20) { toast('JD 内容太短'); return; }
+    setBusy(btn, true, '计算匹配分...');
+    const r = await postForm('/api/jds/add', {
+        jd_text: text, title: document.getElementById('jdTitle').value,
+        company: document.getElementById('jdCompany').value,
+    });
+    setBusy(btn, false);
+    if (!r.success) { toast(r.error === 'NO_PROFILE' ? '先导入简历' : '保存失败'); return; }
+    document.getElementById('jdText').value = '';
+    document.getElementById('jdTitle').value = '';
+    document.getElementById('jdCompany').value = '';
+    await loadJds();
+    openJd(r.jd.id);
+    toast('已保存，匹配分 ' + ((r.jd.match || {}).score ?? '—'));
+}
+async function jdDeep(ev) {
+    const btn = ev && ev.target;
+    if (!state.selectedJd) return;
+    setBusy(btn, true, 'AI 分析中...');
+    const r = await postForm('/api/jds/deep', { jd_id: state.selectedJd });
+    setBusy(btn, false);
+    if (r.deep) renderMarkdown('jdDeepResult', r.deep);
+}
+async function jdDel() {
+    if (!state.selectedJd || !confirm('删除这条 JD？')) return;
+    await postForm('/api/jds/delete', { jd_id: state.selectedJd });
+    state.selectedJd = null;
+    document.getElementById('jdDetailPanel').style.display = 'none';
+    loadJds();
+}
+async function jdToTracker() {
+    const j = state.jds.find(x => x.id === state.selectedJd);
+    if (!j) return;
+    const r = await postForm('/api/tracker/add', {
+        company: j.company || j.title, position: j.title, jd_id: j.id,
+        applied_at: new Date().toISOString().slice(0, 10), notes: '来自岗位库',
+    });
+    if (r.success) { toast('✅ 已记入看板：' + (j.company || j.title)); await loadTrackerCounts(); go('tracker'); }
+}
+function jdSelectedText() {
+    const j = state.jds.find(x => x.id === state.selectedJd);
+    return j ? j.text : '';
+}
+function jdToPitch() {
+    go('prep');
+    document.getElementById('subTabPitch').click();
+    if (jdSelectedText() && state.selectedJd) document.getElementById('pitchJdPick').value = state.selectedJd;
+}
+function jdToInterview() {
+    go('interview');
+    if (jdSelectedText() && state.selectedJd) document.getElementById('interviewJdPick').value = state.selectedJd;
+}
+
+function refreshJdPickers() {
+    const opts = state.jds.map(j => '<option value="' + j.id + '">' + escapeHtml((j.company ? j.company + ' · ' : '') + j.title) + '</option>').join('');
+    for (const id of ['introJdPick', 'pitchJdPick', 'interviewJdPick', 'appJdPick']) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        const cur = el.value;
+        el.innerHTML = '<option value="">' + (id === 'appJdPick' ? '— 手动填写 —' : '— 不指定 —') + '</option>' + opts;
+        if (cur) el.value = cur;
+    }
+    document.getElementById('jdCount').textContent = state.jds.length || '';
+}
+function appJdPickChange() {
+    const id = document.getElementById('appJdPick').value;
+    const j = state.jds.find(x => x.id === id);
+    if (j) {
+        document.getElementById('appCompany').value = j.company || '';
+        document.getElementById('appPosition').value = j.title || '';
+    }
+}
+
+// ═══════════════ tracker ═══════════════
+const STATUS_EMOJI = { '已投递': '📨', '笔试': '📝', '一面': '1️⃣', '二面': '2️⃣', '三面': '3️⃣', 'HR面': '🤝', 'Offer': '🎉', '已入职': '🏁', '已挂': '💀', '已放弃': '🚫' };
+const BOARD_COLUMNS = ['已投递', '笔试', '一面', '二面', '三面', 'HR面', 'Offer', '已挂'];
+const ALL_STATUSES = [...BOARD_COLUMNS, '已入职', '已放弃'];
+const STALE_DAYS = 14;
+
+async function loadTrackerCounts() {
+    const r = await fetch('/api/tracker/dashboard').then(x => x.json());
+    if (r.success) document.getElementById('appCount').textContent = r.stats.active ? r.stats.active + ' 在途' : (r.stats.total || '');
+}
+
+async function loadTracker() {
+    const r = await fetch('/api/tracker/dashboard').then(x => x.json());
+    if (!r.success) return;
+    renderTrackerStats(r.stats || {});
+    renderTrackerKanban(r.applications || []);
+    document.getElementById('trackerActions').innerHTML = mdToHtml(((r.stats || {}).next_actions || []).map(a => '- ' + a).join('\n'));
+}
+function renderTrackerStats(s) {
+    let html = '<div class="stat-strip">' +
+        statBox(s.total || 0, '总投递') + statBox(s.active || 0, '在途') +
+        statBox((s.interview_rate || 0) + '%', '一面率') + statBox((s.offer_rate || 0) + '%', 'Offer 率') + '</div>';
+    const upcoming = s.upcoming || [];
+    if (upcoming.length) html += '<h2>📅 待办</h2><ul>' + upcoming.map(u => '<li><b>' + escapeHtml(u.company) + '</b> · ' + escapeHtml(u.next_action) + (u.date ? '（' + u.date + '）' : '') + '</li>').join('') + '</ul>';
+    document.getElementById('trackerStats').innerHTML = html;
+}
+function statBox(v, label) {
+    return '<div class="stat-box"><div class="sb-value">' + v + '</div><div class="sb-label">' + label + '</div></div>';
+}
+function daysSince(dateStr) {
+    if (!dateStr) return 0;
+    const d = new Date(dateStr.replace(' ', 'T'));
+    if (isNaN(d)) return 0;
+    return Math.max(0, Math.floor((Date.now() - d.getTime()) / 86400000));
+}
+function renderTrackerKanban(apps) {
+    let html = '<div class="kanban kanban-board">';
+    for (const st of BOARD_COLUMNS) {
+        const group = apps.filter(a => st === 'Offer' ? ['Offer', '已入职'].includes(a.status) : st === '已挂' ? ['已挂', '已放弃'].includes(a.status) : a.status === st);
+        html += '<div class="kanban-col" data-status="' + st + '">' +
+            '<div class="kanban-col-title"><span>' + STATUS_EMOJI[st] + ' ' + st + '</span><span class="col-count">' + group.length + '</span></div>';
+        for (const a of group) {
+            const days = daysSince(a.updated_at);
+            const dead = ['已挂', '已放弃'].includes(a.status);
+            const cls = ['Offer', '已入职'].includes(a.status) ? 'offer' : dead ? 'dead' : (days >= STALE_DAYS ? 'stale' : '');
+            html += `<div class="kanban-card ${cls}" draggable="true" data-id="${a.id}">
+                <div class="kc-title">${STATUS_EMOJI[a.status] || ''} ${escapeHtml(a.company)}</div>
+                <div class="kc-meta">${escapeHtml(a.position)}${a.city ? ' · ' + escapeHtml(a.city) : ''}${a.salary ? ' · ' + escapeHtml(a.salary) : ''}<br>
+                    ${escapeHtml(a.channel || '')} · 停留 ${days} 天${days >= STALE_DAYS && !dead ? ' ⚠️' : ''}
+                    ${a.next_action ? '<br>👉 ' + escapeHtml(a.next_action) : ''}</div>
+                <div class="kc-actions">
+                    <select onchange="advanceApp('${a.id}', this)">${ALL_STATUSES.map(s => '<option' + (s === a.status ? ' selected' : '') + '>' + s + '</option>').join('')}</select>
+                    <button class="btn btn-danger" onclick="delApp('${a.id}')">✕</button>
+                </div></div>`;
+        }
+        if (!group.length) html += '<div style="font-size:12px;color:var(--text-muted);padding:8px 4px;">暂无</div>';
+        html += '</div>';
+    }
+    html += '</div>';
+    document.getElementById('trackerKanban').innerHTML = html;
+    document.querySelectorAll('.kanban-card').forEach(card => {
+        card.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', card.dataset.id); card.classList.add('dragging'); });
+        card.addEventListener('dragend', () => card.classList.remove('dragging'));
+    });
+    document.querySelectorAll('.kanban-col').forEach(col => {
+        col.addEventListener('dragover', e => { e.preventDefault(); col.classList.add('drag-over'); });
+        col.addEventListener('dragleave', () => col.classList.remove('drag-over'));
+        col.addEventListener('drop', async e => {
+            e.preventDefault(); col.classList.remove('drag-over');
+            const id = e.dataTransfer.getData('text/plain');
+            if (id) await postForm('/api/tracker/status', { app_id: id, new_status: col.dataset.status });
+            loadTracker(); loadTrackerCounts();
+        });
+    });
+}
+async function addApp(ev) {
+    const btn = ev && ev.target;
+    const jdId = document.getElementById('appJdPick').value;
+    let company = document.getElementById('appCompany').value.trim();
+    let position = document.getElementById('appPosition').value.trim();
+    if (jdId) {
+        const j = state.jds.find(x => x.id === jdId);
+        if (j) { company = company || j.company || j.title; position = position || j.title; }
+    }
+    if (!company || !position) { toast('公司和岗位必填（或从岗位库选择）'); return; }
+    setBusy(btn, true, '保存中...');
+    const r = await postForm('/api/tracker/add', {
+        company: company, position: position, jd_id: jdId || '',
+        channel: document.getElementById('appChannel').value,
+        city: document.getElementById('appCity').value,
+        applied_at: document.getElementById('appDate').value || new Date().toISOString().slice(0, 10),
+    });
+    setBusy(btn, false);
+    if (r.success) {
+        for (const id of ['appCompany', 'appPosition', 'appCity']) document.getElementById(id).value = '';
+        document.getElementById('appJdPick').value = '';
+        loadTracker(); loadTrackerCounts(); toast('✅ 已记录');
+    } else toast('保存失败');
+}
+async function advanceApp(id, select) {
+    const r = await postForm('/api/tracker/status', { app_id: id, new_status: select.value });
+    if (r.success && r.markdown) toast(r.markdown.split('\n')[0].replace(/^>\s*/, '').slice(0, 60));
+    loadTracker(); loadTrackerCounts();
+}
+async function delApp(id) {
+    if (!confirm('删除这条投递记录？')) return;
+    await postForm('/api/tracker/delete', { app_id: id });
+    loadTracker(); loadTrackerCounts();
+}
+
+// ═══════════════ prep ═══════════════
+function switchSub(which, btn) {
+    document.querySelectorAll('.sub-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('subIntro').style.display = which === 'intro' ? 'block' : 'none';
+    document.getElementById('subPitch').style.display = which === 'pitch' ? 'block' : 'none';
+}
+function refreshPrepPickers() {
+    const projects = (state.profile && state.profile.projects) || [];
+    const pick = document.getElementById('pitchPick');
+    pick.innerHTML = '<option value="">— 手动粘贴 —</option>' +
+        projects.map((p, i) => '<option value="' + i + '">' + escapeHtml(p.name || ('项目 ' + (i + 1))) + '</option>').join('');
+    if (state.profile) {
+        document.getElementById('prepProfileBadge').textContent = '✓ 使用档案：' + (state.profile.name || '我') + ' · ' + (state.profile.target_role || '');
+        document.getElementById('introRole').placeholder = '留空 = ' + (state.profile.target_role || '档案里的目标岗位');
+    }
+}
+function pitchPickChange() {
+    const idx = parseInt(document.getElementById('pitchPick').value);
+    if (!isNaN(idx) && state.profile && state.profile.projects[idx]) {
+        const x = state.profile.projects[idx];
+        document.getElementById('pitchText').value = (x.name || '') + '\n' + (x.description || '');
+    }
+}
+function jdTextFromSelect(selId) {
+    const id = document.getElementById(selId).value;
+    const j = state.jds.find(x => x.id === id);
+    return j ? j.text : '';
+}
+async function genIntro(ev) {
+    const btn = ev && ev.target;
+    setBusy(btn, true, '生成中...');
+    const r = await postForm('/api/intro/generate', {
+        resume_text: '', jd_text: jdTextFromSelect('introJdPick'),
+        duration: document.getElementById('introDuration').value,
+        style: document.getElementById('introStyle').value,
+        target_role: document.getElementById('introRole').value,
+    });
+    setBusy(btn, false);
+    renderMarkdown('introContent', r);
+    showResult('introResult'); scrollDown('introResult');
+}
+async function genPitch(ev) {
+    const btn = ev && ev.target;
+    const text = document.getElementById('pitchText').value;
+    if (!text.trim()) { toast('先选一个档案项目或粘贴项目描述'); return; }
+    setBusy(btn, true, '生成中...');
+    const r = await postForm('/api/intro/project', {
+        project_text: text, jd_text: jdTextFromSelect('pitchJdPick'),
+        depth: document.getElementById('pitchDepth').value,
+    });
+    setBusy(btn, false);
+    renderMarkdown('introContent', r);
+    showResult('introResult'); scrollDown('introResult');
+}
+
+// ═══════════════ interview ═══════════════
+let currentSessionId = '';
+async function startInterview(ev) {
+    const btn = ev && ev.target;
+    setBusy(btn, true, '面试官入场...');
+    const r = await postForm('/api/interview/start', {
+        mode: document.getElementById('interviewMode').value,
+        target_role: document.getElementById('interviewRole').value,
+        jd_text: jdTextFromSelect('interviewJdPick'),
+    });
+    setBusy(btn, false);
+    if (!r.success) return;
+    currentSessionId = r.session_id;
+    document.getElementById('chatContainer').style.display = 'flex';
+    document.getElementById('startInterviewBtn').style.display = 'none';
+    document.getElementById('endInterviewBtn').style.display = 'inline-flex';
+    const badge = document.getElementById('chatModeBadge');
+    badge.textContent = r.mode;
+    badge.className = 'chat-mode-badge ' + ((r.mode === '温和' || r.mode === '暖心') ? 'mild' : r.mode === '高压' ? 'hard' : 'hell');
+    document.getElementById('chatMessages').innerHTML = '';
+    addChatMessage('interviewer', r.message);
+    document.getElementById('interviewResult').style.display = 'none';
+    scrollDown('chatContainer');
+}
+function addChatMessage(role, content) {
+    const div = document.getElementById('chatMessages');
+    const avatar = role === 'interviewer' ? '👨‍💼' : '🧑‍💻';
+    const msg = document.createElement('div');
+    msg.className = 'chat-message ' + role;
+    msg.innerHTML = '<div class="chat-avatar">' + avatar + '</div><div class="chat-bubble">' + escapeHtml(content) + '</div>';
+    div.appendChild(msg); div.scrollTop = div.scrollHeight;
+}
+async function sendAnswer() {
+    const input = document.getElementById('chatInput');
+    const answer = input.value.trim();
+    if (!answer || !currentSessionId) return;
+    addChatMessage('candidate', answer); input.value = '';
+    const r = await postForm('/api/interview/respond', { session_id: currentSessionId, answer: answer });
+    if (r.success && r.message) setTimeout(() => addChatMessage('interviewer', r.message), 400);
+    if (r.is_complete) setTimeout(() => endInterview(), 1200);
+}
+async function endInterview() {
+    if (!currentSessionId) return;
+    const r = await postForm('/api/interview/evaluate', { session_id: currentSessionId });
+    if (r.success) {
+        const score = r.overall_score;
+        if (typeof score === 'number') {
+            const color = score >= 8 ? '#2dd4bf' : score >= 5 ? '#f59e0b' : '#ef4444';
+            document.getElementById('interviewScoreDisplay').innerHTML =
+                '<div class="score-circle" style="border-color:' + color + ';background:' + color + '15"><div class="score-value" style="color:' + color + '">' + score.toFixed(1) + '</div><div class="score-label">综合评分 /10</div></div>';
+        }
+        let dims = '';
+        for (const [name, s] of Object.entries(r.dimension_scores || {})) {
+            const pct = s * 10;
+            const bar = s >= 8 ? '#2dd4bf' : s >= 5 ? '#f59e0b' : '#ef4444';
+            dims += '<div class="dimension-item"><span class="dimension-name">' + escapeHtml(name) + '</span><div class="dimension-bar-wrap"><div class="dimension-bar-fill" style="width:' + pct + '%;background:' + bar + '"></div></div><span class="dimension-score">' + s + '/10</span></div>';
+        }
+        document.getElementById('interviewDimensions').innerHTML = dims;
+        let fb = '';
+        if (r.strengths) fb += '<h3>🟢 亮点</h3><ul>' + r.strengths.map(s => '<li>' + escapeHtml(s) + '</li>').join('') + '</ul>';
+        if (r.weaknesses) fb += '<h3>🟡 待提升</h3><ul>' + r.weaknesses.map(w => '<li>' + escapeHtml(w) + '</li>').join('') + '</ul>';
+        if (r.verdict) fb += '<h3>📋 结论</h3><blockquote>' + escapeHtml(r.verdict) + '</blockquote>';
+        if (r.advice) fb += '<h3>💡 建议</h3><p>' + escapeHtml(r.advice) + '</p>';
+        document.getElementById('interviewFeedback').innerHTML = fb;
+        showResult('interviewResult'); scrollDown('interviewResult');
+    }
+    currentSessionId = '';
+    document.getElementById('startInterviewBtn').style.display = 'inline-flex';
+    document.getElementById('endInterviewBtn').style.display = 'none';
+}
+
+// ═══════════════ offers ═══════════════
+let offerCount = 0;
+const DIM_LABELS = [['growth', '职业成长'], ['stability', '稳定性'], ['team', '团队氛围'], ['location', '城市通勤'], ['track', '赛道前景']];
+function addOfferCard(preset) {
+    if (offerCount >= 5) { toast('最多 5 个 Offer'); return; }
+    offerCount++;
+    const p = preset || {};
+    const card = document.createElement('div');
+    card.className = 'offer-card'; card.id = 'offerCard' + offerCount;
+    let sliders = '';
+    for (const [key, label] of DIM_LABELS) {
+        const v = p[key + '_score'] != null ? p[key + '_score'] : 5;
+        sliders += '<div class="slider-row"><span>' + label + '</span><input type="range" min="1" max="10" value="' + v + '" id="oc' + offerCount + '_' + key + '"><span class="sr-val" id="oc' + offerCount + '_' + key + '_v">' + v + '</span></div>';
+    }
+    let salary = p.total_package;
+    if (!salary && p.salary) { const m = String(p.salary).match(/(\d+(?:\.\d)?)/); if (m) salary = m[1]; }
+    card.innerHTML =
+        '<button class="oc-remove" onclick="removeOfferCard(' + offerCount + ')">✕</button>' +
+        '<div class="form-group"><label class="form-label">公司</label><input class="form-input" id="oc' + offerCount + '_company" value="' + escapeHtml(p.company || '') + '" placeholder="公司名"></div>' +
+        '<div class="form-group"><label class="form-label">岗位</label><input class="form-input" id="oc' + offerCount + '_position" value="' + escapeHtml(p.position || '') + '" placeholder="岗位" list="roleList"></div>' +
+        '<div class="form-row"><div class="form-group"><label class="form-label">城市</label><input class="form-input" id="oc' + offerCount + '_city" value="' + escapeHtml(p.city || '') + '"></div>' +
+        '<div class="form-group"><label class="form-label">年总包(万)</label><input class="form-input" id="oc' + offerCount + '_total" value="' + (salary || '') + '" placeholder="35"></div></div>' +
+        sliders +
+        '<div class="form-group"><label class="form-label">备注（股票兑现/leader/加班…）</label><input class="form-input" id="oc' + offerCount + '_notes" value="' + escapeHtml(p.notes || '') + '"></div>';
+    card.querySelectorAll('input[type=range]').forEach(sl =>
+        sl.addEventListener('input', () => { document.getElementById(sl.id + '_v').textContent = sl.value; }));
+    document.getElementById('offerGrid').appendChild(card);
+}
+function removeOfferCard(n) { document.getElementById('offerCard' + n).remove(); }
+async function offersFromTracker(ev) {
+    const btn = ev && ev.target;
+    setBusy(btn, true, '读取看板...');
+    const r = await fetch('/api/offers/prefill').then(x => x.json());
+    setBusy(btn, false);
+    const offers = (r.offers || []).filter(o => o.company);
+    if (!offers.length) { toast('看板里还没有走到 HR面 / Offer 的记录'); return; }
+    document.getElementById('offerGrid').innerHTML = ''; offerCount = 0;
+    offers.forEach(o => addOfferCard(o));
+    toast('已导入 ' + offers.length + ' 个，补上打分就能对比');
+}
+function collectOffers() {
+    const offers = [];
+    for (let i = 1; i <= offerCount + 5; i++) {
+        if (!document.getElementById('offerCard' + i)) continue;
+        const get = id => (document.getElementById('oc' + i + '_' + id) || {}).value || '';
+        const num = id => parseFloat(get(id)) || 0;
+        const o = { company: get('company').trim(), position: get('position').trim(), city: get('city').trim(),
+            total_package: num('total'), notes: get('notes').trim() };
+        for (const [key] of DIM_LABELS) o[key + '_score'] = parseFloat(get(key)) || 5;
+        if (o.company) offers.push(o);
+    }
+    return offers;
+}
+async function compareMyOffers(ev) {
+    const btn = ev && ev.target;
+    const offers = collectOffers();
+    if (offers.length < 2) { toast('至少填 2 个 Offer（公司名必填）'); return; }
+    const weights = {};
+    for (const k of ['salary', 'growth', 'stability', 'team', 'location', 'track']) weights[k] = parseFloat(document.getElementById('w_' + k).value) || 0;
+    setBusy(btn, true, '对比中...');
+    const r = await postJson('/api/offers/compare', { offers: offers, weights: weights, priorities: document.getElementById('offerPriorities').value });
+    setBusy(btn, false);
+    if (!r.success) { renderMarkdown('offersContent', r); showResult('offersResult'); return; }
+    const ranking = r.ranking || [];
+    const maxScore = Math.max(...ranking.map(o => o.weighted_total), 1);
+    const medals = ['🥇', '🥈', '🥉'];
+    document.getElementById('offerRanking').innerHTML = ranking.map((o, i) =>
+        '<div class="rank-row"><div class="rank-medal">' + (medals[i] || (i + 1) + '.') + '</div>' +
+        '<div class="rank-bar"><div class="rank-fill" style="width:' + (o.weighted_total / maxScore * 100) + '%"></div>' +
+        '<span class="rank-name">' + escapeHtml(o.company) + (o.position ? ' · ' + escapeHtml(o.position) : '') + '</span></div>' +
+        '<div class="rank-score">' + o.weighted_total + '</div></div>').join('');
+    const md = (r.markdown || '').replace(/## 总分排名[\s\S]*?(?=\n## )/, '');
+    renderMarkdown('offersContent', md);
+    showResult('offersResult'); scrollDown('offersResult');
+}
+
+// ═══════════════ tools ═══════════════
+let toolsBound = false;
+function bindToolCards() {
+    if (toolsBound) return;
+    toolsBound = true;
+    document.querySelectorAll('.tool-card').forEach(card => {
+        card.addEventListener('click', () => openTool(card.dataset.tool, card));
+    });
+}
+async function openTool(tool, card) {
+    document.querySelectorAll('.tool-card').forEach(c => c.classList.remove('active'));
+    if (card) card.classList.add('active');
+    const host = document.getElementById('toolPanels');
+    if (tool === 'confusion') {
+        host.innerHTML = '<div class="card"><div id="confusionQuestion"></div><div id="confusionChoices" style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0"></div><div class="result-panel" id="confusionResult" style="display:none"><div class="markdown-content" id="confusionResultContent"></div></div></div>';
+        confusionStep = 0; confusionAnswers.length = 0; showConfusionQuestion();
+    } else if (tool === 'career') {
+        host.innerHTML = '<div class="card"><h3>🎯 岗位方向匹配</h3><p class="card-sub">背景默认取档案，可补充兴趣和偏好。</p>' +
+            '<textarea class="form-textarea" id="careerProfile" rows="5" placeholder="补充：兴趣、偏好、纠结的点（可留空）"></textarea>' +
+            '<button class="btn btn-primary" style="margin-top:10px" onclick="runCareer(event)">🎯 开始匹配</button>' +
+            '<div class="result-panel" id="careerResult" style="display:none"><div class="markdown-content" id="careerResultContent"></div></div></div>';
+    } else if (tool === 'growth') {
+        host.innerHTML = '<div class="card"><h3>🗺️ 成长路线</h3><div class="form-row">' +
+            '<div class="form-group"><label class="form-label">当前阶段</label><select class="form-select" id="growthGrade">' +
+            ['大三','大四','研一','研二','研三','已毕业','在职（想跳槽）','转行准备中'].map(t => '<option>' + t + '</option>').join('') + '</select></div>' +
+            '<div class="form-group"><label class="form-label">每天可投入</label><select class="form-select" id="growthTime"><option>每天 1-2 小时</option><option selected>每天 3-4 小时</option><option>每天 5 小时以上</option></select></div></div>' +
+            '<button class="btn btn-primary" onclick="runGrowth(event)">🗺️ 生成成长路线</button>' +
+            '<div class="result-panel" id="growthResult" style="display:none"><div class="markdown-content" id="growthContent"></div></div></div>';
+    } else if (tool === 'trajectory') {
+        host.innerHTML = '<div class="card"><div class="markdown-content" id="trajectoryContent"></div></div>';
+        const r = await fetch('/api/growth-report').then(x => x.json());
+        renderMarkdown('trajectoryContent', r);
+    } else if (tool === 'group') {
+        host.innerHTML = '<div class="card"><h3>👥 群面模拟</h3><div class="form-row">' +
+            '<div class="form-group"><label class="form-label">你的角色</label><input class="form-input" id="groupRole" placeholder="默认取档案岗位" list="roleList"></div>' +
+            '<div class="form-group"><label class="form-label">AI 角色（逗号分隔）</label><input class="form-input" id="groupOthers" value="后端开发, 运营, 设计"></div>' +
+            '<div class="form-group"><label class="form-label">主题</label><input class="form-input" id="groupTopic" value="如何提升一款社交App的次日留存"></div></div>' +
+            '<button class="btn btn-primary" onclick="startGroup()">👥 开始群面</button></div>' +
+            '<div class="chat-container" style="margin-top:16px;display:none" id="groupChatContainer"><div class="chat-header"><div style="display:flex;align-items:center;gap:10px"><span class="emoji-icon">👥</span><span style="font-weight:600">无领导小组讨论 — <span id="groupRoundLabel">第 1/5 轮</span></span></div></div><div class="chat-messages" id="groupChatMessages"></div><div class="chat-input-area"><input class="chat-input" id="groupChatInput" placeholder="输入你的发言..." onkeydown="if(event.key===\'Enter\')sendGroupAnswer()"><button class="btn btn-primary" onclick="sendGroupAnswer()">发言</button></div></div>' +
+            '<div class="result-panel" id="groupResult" style="display:none"><h2>📊 群面分析报告</h2><div class="markdown-content" id="groupResultContent"></div></div>';
+    } else if (tool === 'translate') {
+        host.innerHTML = '<div class="card"><h3>🌐 黑话翻译</h3>' +
+            '<textarea class="form-textarea" id="translateText" rows="6" placeholder="粘贴一段学生腔表达，比如：我参与了项目开发，学习了很多，提升了用户体验"></textarea>' +
+            '<button class="btn btn-primary" style="margin-top:10px" onclick="runTranslate(event)">🌐 翻译成互联网表达</button>' +
+            '<div class="result-panel" id="translateResult" style="display:none"><div class="markdown-content" id="translateContent"></div></div></div>';
+    }
+}
+
+let confusionStep = 0; const confusionAnswers = [];
+const confusionQuestions = [
+    { text: '你有明确的求职方向吗？', choices: ['有', '没有'] },
+    { text: '你写过让自己满意的简历吗？', choices: ['有', '没有'] },
+    { text: '你经历过面试吗？', choices: ['有', '没有'] },
+    { text: '你目前最大的短板是什么？', choices: ['岗位不了解', '简历不会写', '面试紧张', '项目不够好'] },
+];
+function showConfusionQuestion() {
+    if (confusionStep >= confusionQuestions.length) {
+        postJson('/api/confusion-diagnosis', { answers: confusionAnswers }).then(data => {
+            if (data.success) { renderMarkdown('confusionResultContent', data.diagnosis); showResult('confusionResult'); }
+        });
+        document.getElementById('confusionQuestion').innerHTML = '';
+        document.getElementById('confusionChoices').innerHTML = '';
+        return;
+    }
+    const q = confusionQuestions[confusionStep];
+    document.getElementById('confusionQuestion').innerHTML = '<p style="font-size:16px;font-weight:600">Q' + (confusionStep + 1) + '：' + q.text + '</p>';
+    document.getElementById('confusionChoices').innerHTML = q.choices.map((c, i) =>
+        '<button class="btn btn-secondary" onclick="answerConfusion(' + i + ')">' + c + '</button>').join(' ');
+}
+function answerConfusion(i) {
+    const q = confusionQuestions[confusionStep];
+    confusionAnswers.push(confusionStep < 3 ? (q.choices[i] === '有' ? 'Yes' : 'No') : q.choices[i]);
+    confusionStep++; showConfusionQuestion();
+}
+async function runCareer(ev) {
+    const btn = ev && ev.target;
+    setBusy(btn, true, '匹配中...');
+    const r = await postForm('/api/career-match', { profile: document.getElementById('careerProfile').value.trim() });
+    setBusy(btn, false);
+    renderMarkdown('careerResultContent', r);
+    showResult('careerResult');
+}
+async function runGrowth(ev) {
+    const btn = ev && ev.target;
+    setBusy(btn, true, '生成中...');
+    const r = await postForm('/api/growth-plan', { grade: document.getElementById('growthGrade').value, time_commitment: document.getElementById('growthTime').value });
+    setBusy(btn, false);
+    if (r.success) { renderMarkdown('growthContent', r.plan); showResult('growthResult'); }
+}
+async function runTranslate(ev) {
+    const btn = ev && ev.target;
+    const text = document.getElementById('translateText').value;
+    if (!text.trim()) { toast('先粘贴内容'); return; }
+    setBusy(btn, true, '翻译中...');
+    const r = await postForm('/api/bs-translate', { text: text });
+    setBusy(btn, false);
+    renderMarkdown('translateContent', r);
+    showResult('translateResult');
+}
+
+// group
+let groupSessionId = '', groupRound = 0, groupMaxRounds = 5;
+async function startGroup() {
+    const r = await postForm('/api/group/start', {
+        role: document.getElementById('groupRole').value,
+        other_roles: document.getElementById('groupOthers').value,
+        topic: document.getElementById('groupTopic').value,
+    });
+    if (!r.success) return;
+    groupSessionId = r.session_id; groupRound = 0; groupMaxRounds = r.max_rounds || 5;
+    document.getElementById('groupChatContainer').style.display = 'flex';
+    document.getElementById('groupRoundLabel').textContent = '第 1/' + groupMaxRounds + ' 轮';
+    document.getElementById('groupChatMessages').innerHTML = '';
+    if (r.opening) addGroupMessage('system', r.opening);
+}
+function addGroupMessage(role, content) {
+    const div = document.getElementById('groupChatMessages');
+    const msg = document.createElement('div');
+    msg.className = 'chat-message ' + (role === 'system' || role === '你' ? 'interviewer' : 'candidate');
+    msg.innerHTML = '<div class="chat-avatar">' + (role === 'system' ? '📋' : '💬') + '</div><div class="chat-bubble"><strong>' + escapeHtml(role === 'system' ? '开场引导' : role) + '</strong><br>' + escapeHtml(content) + '</div>';
+    div.appendChild(msg); div.scrollTop = div.scrollHeight;
+}
+async function sendGroupAnswer() {
+    const input = document.getElementById('groupChatInput');
+    const answer = input.value.trim();
+    if (!answer || !groupSessionId) return;
+    groupRound++;
+    document.getElementById('groupRoundLabel').textContent = '第 ' + groupRound + '/' + groupMaxRounds + ' 轮';
+    addGroupMessage('你', answer); input.value = '';
+    const r = await postForm('/api/group/respond', { session_id: groupSessionId, answer: answer });
+    if (r.success && r.responses) r.responses.forEach((x, i) => setTimeout(() => addGroupMessage(x.role, x.content), (i + 1) * 600));
+    if (r.is_complete || groupRound >= groupMaxRounds) setTimeout(() => endGroup(), 1500);
+}
+async function endGroup() {
+    if (!groupSessionId) return;
+    const r = await postForm('/api/group/evaluate', { session_id: groupSessionId });
+    if (r.success) { renderMarkdown('groupResultContent', r); showResult('groupResult'); }
+    groupSessionId = '';
+    document.getElementById('groupChatContainer').style.display = 'none';
+}
+
+// ═══════════════ AI settings ═══════════════
+async function refreshAiChip() {
+    const r = await fetch('/api/settings').then(x => x.json());
+    const chip = document.getElementById('aiChip');
+    const txt = document.getElementById('aiChipText');
+    if (r.settings.configured) {
+        chip.classList.add('on');
+        txt.textContent = 'AI 已就绪 · ' + r.settings.model;
+        chip.title = r.settings.api_key_masked + ' @ ' + r.settings.base_url;
+    } else {
+        chip.classList.remove('on');
+        txt.textContent = 'AI 未配置 · 点击设置';
+    }
+    return r.settings;
+}
+function openSettings() {
+    refreshAiChip().then(st => {
+        document.getElementById('setBaseUrl').value = st.base_url || '';
+        document.getElementById('setModel').value = st.model || '';
+        document.getElementById('keyStatus').textContent = st.configured ? ('当前：' + st.api_key_masked + (st.from_env ? '（来自环境变量）' : '')) : '未设置';
+        document.getElementById('setApiKey').value = '';
+        document.getElementById('testResult').textContent = '';
+    });
+    document.getElementById('settingsModal').style.display = 'flex';
+}
+function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
+function presetProvider(name) {
+    const presets = {
+        glm: { base_url: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4.6' },
+        kimi: { base_url: 'https://api.moonshot.cn/v1', model: 'kimi-k2-0905-preview' },
+        deepseek: { base_url: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
+        openai: { base_url: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
+    };
+    const p = presets[name];
+    if (!p) return;
+    document.getElementById('setBaseUrl').value = p.base_url;
+    document.getElementById('setModel').value = p.model;
+    document.getElementById('setApiKey').focus();
+    toast('已填入 ' + name.toUpperCase() + ' 的地址和模型，粘贴你的 Key');
+}
+async function saveSettings(ev) {
+    const btn = ev && ev.target;
+    setBusy(btn, true, '保存中...');
+    const r = await postJson('/api/settings', {
+        api_key: document.getElementById('setApiKey').value.trim(),
+        base_url: document.getElementById('setBaseUrl').value.trim(),
+        model: document.getElementById('setModel').value.trim(),
+    });
+    setBusy(btn, false);
+    if (!r.success) { toast('保存失败：' + (r.error || '')); return; }
+    await refreshAiChip();
+    toast('✅ 已保存');
+    closeSettings();
+}
+async function testSettings(ev) {
+    const btn = ev && ev.target;
+    const out = document.getElementById('testResult');
+    // 先保存当前填写的（不留空 Key 就更新）
+    await postJson('/api/settings', {
+        api_key: document.getElementById('setApiKey').value.trim(),
+        base_url: document.getElementById('setBaseUrl').value.trim(),
+        model: document.getElementById('setModel').value.trim(),
+    });
+    setBusy(btn, true, '测试中...');
+    const t0 = Date.now();
+    const r = await postForm('/api/settings/test', {});
+    setBusy(btn, false);
+    await refreshAiChip();
+    if (r.success) {
+        out.innerHTML = '<span style="color:var(--success)">✅ 连接成功 · ' + escapeHtml(r.model) + ' · ' + (r.latency_ms || (Date.now() - t0)) + 'ms · 回复：' + escapeHtml(r.reply || '') + '</span>';
+    } else {
+        out.innerHTML = '<span style="color:var(--danger)">❌ ' + escapeHtml(r.error || '失败') + '</span>';
+    }
+}
+document.getElementById('settingsModal').addEventListener('click', e => {
+    if (e.target === document.getElementById('settingsModal')) closeSettings();
+});
+
+// ═══════════════ boot ═══════════════
+document.getElementById('obDropzone').addEventListener('dragover', e => { e.preventDefault(); document.getElementById('obDropzone').classList.add('over'); });
+document.getElementById('obDropzone').addEventListener('dragleave', () => document.getElementById('obDropzone').classList.remove('over'));
+document.getElementById('obDropzone').addEventListener('drop', e => {
+    e.preventDefault(); document.getElementById('obDropzone').classList.remove('over');
+    if (e.dataTransfer.files.length) document.getElementById('obFile').files = e.dataTransfer.files;
+});
+// 我的简历页的项目选择器在进入页面时刷新
+const _origGo = go;
+go = function(page) {
+    _origGo(page);
+    if (page === 'resume') refreshProjectPick();
+};
+boot();
+</script>
+</body>
+</html>

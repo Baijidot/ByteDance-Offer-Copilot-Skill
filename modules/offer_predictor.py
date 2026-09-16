@@ -1,11 +1,11 @@
 """
 Offer Predictor — 基于简历与 JD 匹配度，计算 Offer 概率。
 
-Evaluates candidates across 7 dimensions calibrated to ByteDance campus hiring:
+Evaluates candidates across 6 dimensions calibrated to top-tier internet company hiring:
 - 学历背景 (15%)
 - 项目质量 (30%)
-- 实习经历 (20%)
-- 产品/增长 Sense (20%)
+- 实习/工作经历 (20%)
+- 专业深度/业务 Sense (20%)
 - AI 能力 (10%)
 - 面试预期 (5%)
 
@@ -14,15 +14,16 @@ No mock data. Every output is LLM-driven.
 
 from utils import callLlm, safeCallLlm
 
-SYSTEM_PROMPT = """你是字节跳动的资深校招面试官，每年面试 200+ 校招候选人。
-你深刻理解什么样的学生能拿到 Offer。
+SYSTEM_PROMPT = """你是互联网大厂的资深面试官，每年面试 200+ 校招和社招候选人，覆盖产品、技术、运营、市场、设计等职能。
+你深刻理解什么样的候选人能拿到 Offer。
 你极度反感模板化评价，每一句话都要有具体指向。
 
 评估原则：
 - 项目质量 > 学校名气
-- 增长案例 > 实习数量
+- 成长案例 > 实习数量
 - AI 协同能力是新兴加分项
 - 内容/社区经历反映用户理解
+- 根据意向岗位的职能类型调整「专业深度/业务 Sense」的评估标准（技术岗看工程深度，产品岗看业务判断，运营岗看数据与用户洞察）
 
 禁止说：
 - 「建议提升专业能力」（太空泛）
@@ -36,7 +37,7 @@ def predict(
     school: str = "",
     major: str = "",
     degree: str = "本科",
-    target_role: str = "产品经理",
+    target_role: str = "",
     skills: str = "",
     projects: str = "",
     internships: str = "",
@@ -84,7 +85,7 @@ def predict(
 学校：{school or '未提供'}
 专业：{major or '未提供'}
 学历：{degree}
-意向岗位：{target_role}
+意向岗位：{target_role or '未指定（请根据简历和 JD 自行判断职能类型）'}
 
 【技能】
 {skills or '未提供'}
@@ -92,7 +93,7 @@ def predict(
 【项目经历】
 {projects or '未提供'}
 
-【实习经历】
+【实习/工作经历】
 {internships or '未提供'}
 
 【内容/社区/账号经历】
@@ -115,8 +116,8 @@ def predict(
   "dimensions": [
     {{"name": "学历背景", "score": 10.0, "max_score": 15, "comment": "具体一句话评价"}},
     {{"name": "项目质量", "score": 18.0, "max_score": 30, "comment": "具体一句话评价"}},
-    {{"name": "实习经历", "score": 12.0, "max_score": 20, "comment": "具体一句话评价"}},
-    {{"name": "产品/增长Sense", "score": 14.0, "max_score": 20, "comment": "具体一句话评价"}},
+    {{"name": "实习/工作经历", "score": 12.0, "max_score": 20, "comment": "具体一句话评价"}},
+    {{"name": "专业深度/业务Sense", "score": 14.0, "max_score": 20, "comment": "具体一句话评价"}},
     {{"name": "AI能力", "score": 5.0, "max_score": 10, "comment": "具体一句话评价"}},
     {{"name": "面试预期", "score": 3.0, "max_score": 5, "comment": "具体一句话评价"}}
   ],
@@ -141,7 +142,7 @@ def predict(
 
     result = safeCallLlm(prompt, SYSTEM_PROMPT, output_format="json")
 
-    if isinstance(result, dict) and "_trait" not in result:
+    if isinstance(result, dict) and "_trait" not in result and not result.get("error") and not result.get("_error"):
         result["markdown"] = _render_markdown(result)
 
     return result
@@ -167,7 +168,9 @@ def _render_markdown(data: dict) -> str:
     ]
 
     for dim in data.get("dimensions", []):
-        lines.append(f"| {dim['name']} | {dim['score']} | {dim['max_score']} | {dim['comment']} |")
+        if not isinstance(dim, dict) or not dim.get("name"):
+            continue
+        lines.append(f"| {dim.get('name')} | {dim.get('score', 0)} | {dim.get('max_score', 10)} | {dim.get('comment', '')} |")
 
     lines.append("")
     lines.append("## 🟢 你的优势")
